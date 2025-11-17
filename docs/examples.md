@@ -9,82 +9,100 @@
 ### 获取日线数据
 
 ```bash
-# 获取最新日线数据
-emst --code 688005
-
-# 使用 fetch 命令（等价）
+# 获取最新日线数据（默认输出为 JSON 格式到 stdout）
 emst fetch --code 688005
 
+# 或使用简写形式
+emst f --code 688005
+
 # 获取并保存到文件
-emst --code 688005 --output daily.json
+emst fetch --code 688005 --output daily.json
 
 # 指定日期范围获取
-emst --code 688005 --start 20240101 --end 20241231 --output 2024.json
+emst fetch --code 688005 --start 20240101 --end 20241231 --output 2024.json
+
+# 使用表格格式输出
+emst fetch --code 688005 --format table
+
+# 使用文本格式输出
+emst fetch --code 688005 --format text
+
+# 静默模式（仅输出数据，不显示进度信息）
+emst fetch --code 688005 --quiet
+
+# 详细模式（显示调试信息）
+emst fetch --code 688005 --verbose
 ```
 
 ### 获取不同时间周期
 
 ```bash
 # 周线数据
-emst --code 688005 --timeframe weekly --output weekly.json
+emst fetch --code 688005 --timeframe weekly --output weekly.json
 
 # 月线数据
-emst --code 688005 --timeframe monthly --output monthly.json
+emst fetch --code 688005 --timeframe monthly --output monthly.json
 
 # 5分钟日内数据
-emst --code 688005 --timeframe 5min --output 5min.json
+emst fetch --code 688005 --timeframe 5min --output 5min.json
 
 # 15分钟日内数据
-emst --code 688005 --timeframe 15min --output 15min.json
+emst fetch --code 688005 --timeframe 15min --output 15min.json
 
 # 30分钟日内数据
-emst --code 688005 --timeframe 30min --output 30min.json
+emst fetch --code 688005 --timeframe 30min --output 30min.json
 
 # 60分钟日内数据
-emst --code 688005 --timeframe 60min --output 60min.json
+emst fetch --code 688005 --timeframe 60min --output 60min.json
 ```
 
 ### 导出格式
 
 ```bash
 # JSON格式（默认）
-emst --code 688005 --output data.json --format json
+emst fetch --code 688005 --output data.json --format json
 
-# CSV格式
-emst --code 688005 --output data.csv --format csv
+# 表格格式
+emst fetch --code 688005 --format table
+
+# 文本格式
+emst fetch --code 688005 --format text
+
+# CSV格式（通过文件扩展名自动识别）
+emst fetch --code 688005 --output data.csv
 ```
 
 ### 复权类型
 
 ```bash
 # 不复权
-emst --code 688005 --fqt 0 --output none.json
+emst fetch --code 688005 --fqt 0 --output none.json
 
 # 前复权（默认）
-emst --code 688005 --fqt 1 --output forward.json
+emst fetch --code 688005 --fqt 1 --output forward.json
 # 或
-emst --code 688005 --output forward.json
+emst fetch --code 688005 --output forward.json
 
 # 后复权
-emst --code 688005 --fqt 2 --output backward.json
+emst fetch --code 688005 --fqt 2 --output backward.json
 ```
 
 ### 多市场支持
 
 ```bash
 # A股（自动检测市场，无需指定）
-emst --code 688005              # 上海（自动检测）
-emst --code 000001              # 深圳（自动检测）
+emst fetch --code 688005              # 上海（自动检测）
+emst fetch --code 000001              # 深圳（自动检测）
 
 # 显式指定A股市场
-emst --code 600000 --market 1   # 上海
-emst --code 000001 --market 0   # 深圳
+emst fetch --code 600000 --market 1   # 上海
+emst fetch --code 000001 --market 0   # 深圳
 
 # 港股（需要指定市场）
-emst --code 00700 --market 116
+emst fetch --code 00700 --market 116
 
 # 美股（需要指定市场）
-emst --code AAPL --market 105
+emst fetch --code AAPL --market 105
 ```
 
 ## 实时行情
@@ -97,6 +115,9 @@ emst quote --code 688005
 
 # JSON格式输出
 emst quote --code 688005 --format json
+
+# 文本格式输出
+emst quote --code 688005 --format text
 
 # 港股实时行情
 emst quote --code 00700 --market 116
@@ -116,6 +137,9 @@ emst stream --code 688005 --types quote,trend,detail
 
 # JSON格式输出
 emst stream --code 688005 --format json
+
+# 文本格式输出
+emst stream --code 688005 --format text
 
 # 监控自选股列表
 emst stream --watchlist
@@ -152,8 +176,14 @@ emst watchlist list
 # 查看详细信息（包含缓存统计）
 emst watchlist list --info
 
+# JSON格式列出
+emst watchlist list --format json
+
 # 检查自选股市场代码
 emst watchlist check
+
+# JSON格式检查
+emst watchlist check --format json
 
 # 移除股票
 emst watchlist remove 688005
@@ -203,23 +233,23 @@ emst watchlist sync --timeframe daily --start 20240101 --end 20241231 --force
 
 ```bash
 # 首次获取（创建缓存）
-emst --code 688005
+emst fetch --code 688005
 
 # 第二次获取（如果缓存有效则使用缓存）
-emst --code 688005
+emst fetch --code 688005
 
 # 强制获取新数据
-emst --code 688005 --no-cache
+emst fetch --code 688005 --no-cache
 ```
 
 ### 带日期范围的缓存
 
 ```bash
 # 指定日期范围获取（使用缓存）
-emst --code 688005 --start 20240101 --end 20240630
+emst fetch --code 688005 --start 20240101 --end 20240630
 
 # 获取扩展范围（使用缓存 + 获取新数据）
-emst --code 688005 --start 20240101 --end 20241231
+emst fetch --code 688005 --start 20240101 --end 20241231
 ```
 
 ### 验证缓存
@@ -260,7 +290,7 @@ emst watchlist sync
 
 # 批量导出数据
 for code in 688005 600000 000001; do
-  emst --code $code --output ${code}.json
+  emst fetch --code $code --output ${code}.json
 done
 ```
 
@@ -275,11 +305,11 @@ emst watchlist add 000001
 emst watchlist sync --start 20240101 --end 20241231
 
 # 3. 导出单个股票
-emst --code 688005 --start 20240101 --end 20241231 --output stock1.json
-emst --code 000001 --start 20240101 --end 20241231 --output stock2.json
+emst fetch --code 688005 --start 20240101 --end 20241231 --output stock1.json
+emst fetch --code 000001 --start 20240101 --end 20241231 --output stock2.json
 
-# 4. 导出为CSV格式
-emst --code 688005 --output stock1.csv --format csv
+# 4. 导出为CSV格式（通过文件扩展名自动识别）
+emst fetch --code 688005 --output stock1.csv
 ```
 
 ### 多时间周期分析
@@ -289,13 +319,13 @@ emst --code 688005 --output stock1.csv --format csv
 emst watchlist sync
 
 # 获取特定时间周期进行分析
-emst --code 688005 --timeframe daily --output daily.json
-emst --code 688005 --timeframe weekly --output weekly.json
-emst --code 688005 --timeframe monthly --output monthly.json
+emst fetch --code 688005 --timeframe daily --output daily.json
+emst fetch --code 688005 --timeframe weekly --output weekly.json
+emst fetch --code 688005 --timeframe monthly --output monthly.json
 
 # 获取日内数据
-emst --code 688005 --timeframe 5min --output 5min.json
-emst --code 688005 --timeframe 15min --output 15min.json
+emst fetch --code 688005 --timeframe 5min --output 5min.json
+emst fetch --code 688005 --timeframe 15min --output 15min.json
 ```
 
 ### 日内数据收集
@@ -434,7 +464,7 @@ if (data) {
 emst watchlist sync --force
 
 # 强制刷新特定股票
-emst --code 688005 --no-cache
+emst fetch --code 688005 --no-cache
 ```
 
 ### 验证自选股配置
@@ -468,8 +498,8 @@ emst watchlist sync --timeframe daily
 emst watchlist sync --timeframe weekly
 
 # 或者单独同步每只股票
-emst --code 688005 --no-cache
-emst --code 600000 --no-cache
+emst fetch --code 688005 --no-cache
+emst fetch --code 600000 --no-cache
 ```
 
 ## 最佳实践
@@ -484,7 +514,7 @@ emst watchlist sync --timeframe daily
 emst quote --code 688005
 
 # 分析：获取特定数据
-emst --code 688005 --output analysis.json
+emst fetch --code 688005 --output analysis.json
 ```
 
 ### 每周工作流
@@ -636,7 +666,7 @@ sudo systemctl start emst-sync.timer
 emst quote --code 688005
 
 # 查看最近数据
-emst --code 688005 --start 20241201 --end 20241231
+emst fetch --code 688005 --start 20241201 --end 20241231
 ```
 
 ### 场景2：建立股票数据库
@@ -658,14 +688,14 @@ emst watchlist sync --timeframe daily
 
 ```bash
 # 获取多时间周期数据
-emst --code 688005 --timeframe daily --output daily.json
-emst --code 688005 --timeframe weekly --output weekly.json
-emst --code 688005 --timeframe monthly --output monthly.json
+emst fetch --code 688005 --timeframe daily --output daily.json
+emst fetch --code 688005 --timeframe weekly --output weekly.json
+emst fetch --code 688005 --timeframe monthly --output monthly.json
 
 # 获取不同复权类型
-emst --code 688005 --fqt 0 --output none.json
-emst --code 688005 --fqt 1 --output forward.json
-emst --code 688005 --fqt 2 --output backward.json
+emst fetch --code 688005 --fqt 0 --output none.json
+emst fetch --code 688005 --fqt 1 --output forward.json
+emst fetch --code 688005 --fqt 2 --output backward.json
 ```
 
 ### 场景4：实时监控交易
@@ -681,14 +711,14 @@ emst stream --watchlist --types quote
 ### 场景5：数据导出和分析
 
 ```bash
-# 导出为CSV用于Excel分析
-emst --code 688005 --output data.csv --format csv
+# 导出为CSV用于Excel分析（通过文件扩展名自动识别）
+emst fetch --code 688005 --output data.csv
 
 # 导出JSON用于程序分析
-emst --code 688005 --output data.json --format json
+emst fetch --code 688005 --output data.json --format json
 
 # 批量导出自选股数据
 for code in $(emst watchlist list | grep -oE '[0-9]{6}'); do
-  emst --code $code --output ${code}.json
+  emst fetch --code $code --output ${code}.json
 done
 ```

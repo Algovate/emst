@@ -4,46 +4,27 @@ import { join } from 'path';
 import { Market, Timeframe, CrawlerOptions, AdjustmentType } from '../../infra/types.js';
 import { FetchOptions } from '../types.js';
 import {
-  validateMarketAndCode,
-  getMarketName,
   getAdjustmentTypeName,
   validateTimeframe,
   validateDateFormat,
   handleError,
-  detectMarketFromCode,
 } from '../../utils/utils.js';
 import { fetchWithCache } from '../../utils/fetch-helper.js';
 import { exportToCSV } from '../../utils/export.js';
-import { logger } from '../../infra/logger.js';
+import { outputData, outputProgress, OutputFormat } from '../output.js';
+import { resolveMarket } from '../market-utils.js';
+import { validateFormat, wrapCommandAction } from '../command-utils.js';
 
 /**
  * Handle fetch action
  */
 export async function handleFetchAction(options: FetchOptions): Promise<void> {
-  // Auto-detect market for A-share codes if not provided
-  let market: Market;
-  const detectedMarket = detectMarketFromCode(options.code);
-  
-  if (options.market) {
-    // User provided market, validate it
-    market = validateMarketAndCode(options.code, options.market);
-    
-    // Warn if provided market doesn't match auto-detected market (for A-share)
-    if (detectedMarket !== null && market !== detectedMarket) {
-      logger.warn(`Warning: Provided market ${getMarketName(market)} doesn't match auto-detected market ${getMarketName(detectedMarket)} for code ${options.code}. Using provided market.`);
-    }
-  } else {
-    // No market provided, try to auto-detect
-    if (detectedMarket !== null) {
-      // A-share code, auto-detect successful
-      market = detectedMarket;
-      logger.info(`Auto-detected market: ${getMarketName(market)}`);
-    } else {
-      // Cannot auto-detect (HK or US stock), default to Shanghai
-      market = validateMarketAndCode(options.code, '1');
-      logger.info(`Using default market: ${getMarketName(market)} (cannot auto-detect for code ${options.code})`);
-    }
-  }
+  // Resolve market (auto-detect or validate provided)
+  const { market, marketName } = resolveMarket({
+    code: options.code,
+    marketOption: options.market,
+    quiet: options.quiet,
+  });
 
   // Validate timeframe
   const timeframe = validateTimeframe(options.timeframe || 'daily');
@@ -57,10 +38,7 @@ export async function handleFetchAction(options: FetchOptions): Promise<void> {
   }
 
   // Validate format
-  const format = options.format || 'json';
-  if (format !== 'json' && format !== 'csv') {
-    throw new Error('Format must be "json" or "csv"');
-  }
+  const format = validateFormat(options.format, 'json');
 
   // Validate and parse fqt parameter
   let fqt: AdjustmentType = 1; // Default to forward adjustment
@@ -85,12 +63,13 @@ export async function handleFetchAction(options: FetchOptions): Promise<void> {
 
   const useCache = options.cache !== false; // Default to true, false if --no-cache is used
 
-  logger.info('Fetching K-line data...');
-  logger.info(`Stock Code: ${options.code}`);
-  logger.info(`Market: ${getMarketName(market)}`);
-  logger.info(`Timeframe: ${timeframe}`);
-  logger.info(`Adjustment: ${getAdjustmentTypeName(fqt)}`);
-  logger.info(`Cache: ${useCache ? 'enabled' : 'disabled'}`);
+  // Output progress information to stderr
+  outputProgress('Fetching K-line data...', options.quiet);
+  outputProgress(`Stock Code: ${options.code}`, options.quiet);
+  outputProgress(`Market: ${marketName}`, options.quiet);
+  outputProgress(`Timeframe: ${timeframe}`, options.quiet);
+  outputProgress(`Adjustment: ${getAdjustmentTypeName(fqt)}`, options.quiet);
+  outputProgress(`Cache: ${useCache ? 'enabled' : 'disabled'}`, options.quiet);
 
   // Fetch data with cache handling
   const data = await fetchWithCache(
@@ -105,33 +84,69 @@ export async function handleFetchAction(options: FetchOptions): Promise<void> {
   );
 
   if (data.length === 0) {
-    logger.info('No data found for the specified criteria.');
+    outputProgress('No data found for the specified criteria.', options.quiet);
     process.exit(0);
   }
 
-  logger.info(`Fetched ${data.length} records`);
+  outputProgress(`Fetched ${data.length} records`, options.quiet);
 
   // Output data
   if (options.output) {
     const outputPath = options.output;
-    if (format === 'json') {
-      writeFileSync(outputPath, JSON.stringify(data, null, 2), 'utf-8');
-      logger.info(`Data saved to ${outputPath}`);
-    } else {
+    // For file output, support CSV format
+    if (outputPath.endsWith('.csv')) {
       await exportToCSV(data, outputPath);
-      logger.info(`Data saved to ${outputPath}`);
+      outputProgress(`Data saved to ${outputPath}`, options.quiet);
+    } else {
+      // For other file formats, use the specified format
+      const fileContent = format === 'json' 
+        ? JSON.stringify(data, null, 2)
+        : format === 'table'
+        ? formatKlineTableForFile(data)
+        : formatKlineTextForFile(data);
+      writeFileSync(outputPath, fileContent, 'utf-8');
+      outputProgress(`Data saved to ${outputPath}`, options.quiet);
     }
   } else {
-    // Print to stdout
-    if (format === 'json') {
-      logger.info(JSON.stringify(data, null, 2));
-    } else {
-      // For CSV, we need to write to a temp file or format manually
-      const tempPath = join(process.cwd(), `emst_${options.code}_${Date.now()}.csv`);
-      await exportToCSV(data, tempPath);
-      logger.info(`Data saved to ${tempPath}`);
-    }
+    // Print to stdout using unified output function
+    outputData(data, format, { quiet: options.quiet });
   }
+}
+
+/**
+ * Format K-line data as table for file output
+ */
+function formatKlineTableForFile(data: any[]): string {
+  // Reuse the same formatting logic from output.ts
+  if (data.length === 0) {
+    return 'No data';
+  }
+
+  const lines: string[] = [];
+  lines.push('Date       | Open     | Close    | High     | Low      | Volume      | Amount');
+  lines.push('─'.repeat(80));
+
+  for (const item of data) {
+    const date = item.date.padEnd(10);
+    const open = item.open.toFixed(2).padStart(8);
+    const close = item.close.toFixed(2).padStart(8);
+    const high = item.high.toFixed(2).padStart(8);
+    const low = item.low.toFixed(2).padStart(8);
+    const volume = item.volume.toLocaleString().padStart(12);
+    const amount = item.amount.toLocaleString().padStart(12);
+    lines.push(`${date} | ${open} | ${close} | ${high} | ${low} | ${volume} | ${amount}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format K-line data as text for file output
+ */
+function formatKlineTextForFile(data: any[]): string {
+  return data.map(item => 
+    `${item.date} ${item.open} ${item.close} ${item.high} ${item.low} ${item.volume} ${item.amount}`
+  ).join('\n');
 }
 
 /**
@@ -150,17 +165,12 @@ export function registerFetchCommand(program: Command, commonOptions: any): void
   commonOptions.timeframe(fetchCommand);
   commonOptions.dateRange(fetchCommand);
   commonOptions.output(fetchCommand);
+  commonOptions.logging(fetchCommand);
 
   fetchCommand
     .option('-l, --limit <number>', 'Maximum records to fetch', '1000000')
     .option('--fqt <0|1|2>', 'Price adjustment type: 0=none, 1=forward, 2=backward (default: 1)')
     .option('--no-cache', 'Bypass cache and fetch fresh data')
-    .action(async (options: FetchOptions) => {
-      try {
-        await handleFetchAction(options);
-      } catch (error) {
-        handleError(error);
-      }
-    });
+    .action(wrapCommandAction(handleFetchAction));
 }
 

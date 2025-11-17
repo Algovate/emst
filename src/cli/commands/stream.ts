@@ -1,21 +1,14 @@
 import { Command } from 'commander';
 import { EastMoneyCrawler } from '../../core/crawler.js';
 import { Market, SSEConnectionType, SSEQuoteData, SSETrendData, SSEDetailData } from '../../infra/types.js';
-import { validateMarketAndCode, getMarketName, handleError, detectMarketFromCode } from '../../utils/utils.js';
+import { getMarketName } from '../../utils/utils.js';
 import { logger } from '../../infra/logger.js';
 import { getWatchlist } from '../../storage/watchlist.js';
 import { formatSSEQuote, formatTrendData, formatDetailData } from '../../utils/sse-formatters.js';
-
-interface StreamOptions {
-  code?: string;
-  market?: string;
-  watchlist?: boolean;
-  types?: string;
-  format?: string;
-  fields?: string;
-  interval?: number;
-  output?: string;
-}
+import { StreamOptions } from '../types.js';
+import { outputProgress, outputRaw, OutputFormat } from '../output.js';
+import { resolveMarket } from '../market-utils.js';
+import { validateFormat, wrapCommandAction } from '../command-utils.js';
 
 /**
  * Parse connection types from string
@@ -63,53 +56,43 @@ function formatSSEData(data: any, type: SSEConnectionType): string {
 }
 
 /**
- * Create data callback handler
+ * Create data callback handler for stream command
+ * Uses raw output for real-time streaming
  */
 function createDataHandler(
-  format: string,
+  format: OutputFormat,
   code: string,
+  quiet: boolean,
   market?: Market
 ): (data: any, type: SSEConnectionType) => void {
   return (data: any, type: SSEConnectionType) => {
+    if (quiet) {
+      return; // Don't output data in quiet mode
+    }
+
+    let output: string;
+
     if (format === 'json') {
-      const output: any = { code, type, data, timestamp: Date.now() };
+      const jsonOutput: any = { code, type, data, timestamp: Date.now() };
       if (market !== undefined) {
-        output.market = market;
+        jsonOutput.market = market;
       }
-      logger.info(JSON.stringify(output, null, 2));
-    } else {
+      output = JSON.stringify(jsonOutput, null, 2) + '\n';
+    } else if (format === 'table') {
       const formatted = formatSSEData(data, type);
       const prefix = market !== undefined ? `[${code}]` : '';
-      logger.info(`\n${prefix} ${type.toUpperCase()}:\n${formatted}\n`);
+      output = `\n${prefix} ${type.toUpperCase()}:\n${formatted}\n\n`;
+    } else {
+      // text format - simplified output
+      const formatted = formatSSEData(data, type);
+      const prefix = market !== undefined ? `[${code}]` : '';
+      output = `${prefix} ${type.toUpperCase()}: ${formatted}\n`;
     }
+
+    outputRaw(output, quiet);
   };
 }
 
-/**
- * Resolve market from options
- */
-function resolveMarket(code: string, marketOption?: string): Market {
-  const detectedMarket = detectMarketFromCode(code);
-
-  if (marketOption) {
-    const market = validateMarketAndCode(code, marketOption);
-    if (detectedMarket !== null && market !== detectedMarket) {
-      logger.warn(
-        `Warning: Provided market ${getMarketName(market)} doesn't match auto-detected market ${getMarketName(detectedMarket)}`
-      );
-    }
-    return market;
-  }
-
-  if (detectedMarket !== null) {
-    logger.info(`Auto-detected market: ${getMarketName(detectedMarket)}`);
-    return detectedMarket;
-  }
-
-  const defaultMarket = validateMarketAndCode(code, '1');
-  logger.info(`Using default market: ${getMarketName(defaultMarket)}`);
-  return defaultMarket;
-}
 
 /**
  * Register stream command
@@ -125,25 +108,29 @@ export function registerStreamCommand(program: Command, commonOptions: any): voi
     .option('-m, --market <market>', 'Market code (0=Shenzhen, 1=Shanghai, 105=US, 116=HK). Auto-detected for A-share codes if not provided.')
     .option('-w, --watchlist', 'Stream all stocks in watchlist')
     .option('-t, --types <types>', 'Connection types to subscribe (quote,trend,detail,news). Default: quote', 'quote')
-    .option('-f, --format <format>', 'Output format (table/json)', 'table')
+    .option('-f, --format <format>', 'Output format (json/table/text)', 'table')
     .option('--fields <fields>', 'Fields to display (comma-separated)')
     .option('--interval <interval>', 'Update interval in milliseconds for table format', '1000')
-    .option('-o, --output <path>', 'Output file path (for CSV format)')
-    .action(async (options: StreamOptions) => {
+    .option('-o, --output <path>', 'Output file path (for CSV format)');
+  
+  commonOptions.logging(streamCommand);
+  
+  streamCommand.action(wrapCommandAction(async (options: StreamOptions) => {
       const crawler = new EastMoneyCrawler();
       let isRunning = true;
 
       // Handle Ctrl+C
       process.on('SIGINT', () => {
-        logger.info('\nStopping streams...');
+        if (!options.quiet) {
+          logger.info('\nStopping streams...');
+        }
         isRunning = false;
         crawler.stopAllSSEStreams();
         process.exit(0);
       });
 
-      try {
-        const types = parseConnectionTypes(options.types);
-        const format = options.format || 'table';
+      const types = parseConnectionTypes(options.types);
+      const format = validateFormat(options.format, 'table');
 
         if (options.watchlist) {
           // Stream watchlist
@@ -153,10 +140,10 @@ export function registerStreamCommand(program: Command, commonOptions: any): voi
             return;
           }
 
-          logger.info(`Streaming ${watchlist.length} stocks from watchlist...`);
+          outputProgress(`Streaming ${watchlist.length} stocks from watchlist...`, options.quiet);
 
           for (const entry of watchlist) {
-            const dataHandler = createDataHandler(format, entry.code, entry.market);
+            const dataHandler = createDataHandler(format, entry.code, options.quiet || false, entry.market);
             const errorHandler = (error: Error, type: SSEConnectionType) => {
               logger.error(`Error for ${entry.code} (${type}):`, error.message);
             };
@@ -178,10 +165,14 @@ export function registerStreamCommand(program: Command, commonOptions: any): voi
             return;
           }
 
-          const market = resolveMarket(options.code, options.market);
-          logger.info(`Streaming ${options.code} (${getMarketName(market)})...`);
+          const { market, marketName } = resolveMarket({
+            code: options.code,
+            marketOption: options.market,
+            quiet: options.quiet,
+          });
+          outputProgress(`Streaming ${options.code} (${marketName})...`, options.quiet);
 
-          const dataHandler = createDataHandler(format, options.code, market);
+          const dataHandler = createDataHandler(format, options.code, options.quiet || false, market);
           const errorHandler = (error: Error, type: SSEConnectionType) => {
             logger.error(`Error (${type}):`, error.message);
           };
@@ -197,15 +188,11 @@ export function registerStreamCommand(program: Command, commonOptions: any): voi
           );
         }
 
-        // Keep running
-        logger.info('Streaming started. Press Ctrl+C to stop.');
-        while (isRunning) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      } catch (error) {
-        handleError(error);
-        crawler.stopAllSSEStreams();
+      // Keep running
+      outputProgress('Streaming started. Press Ctrl+C to stop.', options.quiet);
+      while (isRunning) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    });
+    }));
 }
 

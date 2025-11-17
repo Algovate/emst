@@ -14,6 +14,7 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 class Logger {
   private level: LogLevel;
   private consoleEnabled: boolean;
+  private quiet: boolean = false;
   private fileStream: WriteStream | null = null;
 
   constructor() {
@@ -44,6 +45,11 @@ class Logger {
   }
 
   private write(level: LogLevel, message: string, ...args: any[]): void {
+    // Error messages are always shown, even in quiet mode
+    if (this.quiet && level !== 'error') {
+      return;
+    }
+
     if (!this.shouldLog(level)) {
       return;
     }
@@ -51,15 +57,16 @@ class Logger {
     const formatted = this.formatMessage(level, message, ...args);
 
     if (this.consoleEnabled) {
+      // All logs go to stderr to separate from data output (stdout)
       switch (level) {
         case 'debug':
-          console.debug(formatted);
+          console.error(formatted);
           break;
         case 'info':
-          console.log(formatted);
+          console.error(formatted);
           break;
         case 'warn':
-          console.warn(formatted);
+          console.error(formatted);
           break;
         case 'error':
           console.error(formatted);
@@ -88,6 +95,27 @@ class Logger {
     this.write('error', message, ...args);
   }
 
+  /**
+   * Set log level dynamically
+   */
+  setLevel(level: LogLevel): void {
+    this.level = level;
+  }
+
+  /**
+   * Set console output enabled/disabled
+   */
+  setConsoleEnabled(enabled: boolean): void {
+    this.consoleEnabled = enabled;
+  }
+
+  /**
+   * Set quiet mode (disable all output except errors)
+   */
+  setQuiet(quiet: boolean): void {
+    this.quiet = quiet;
+  }
+
   close(): void {
     if (this.fileStream) {
       this.fileStream.end();
@@ -112,6 +140,9 @@ export const logger = {
   info: (message: string, ...args: any[]) => getLogger().info(message, ...args),
   warn: (message: string, ...args: any[]) => getLogger().warn(message, ...args),
   error: (message: string, ...args: any[]) => getLogger().error(message, ...args),
+  setLevel: (level: LogLevel) => getLogger().setLevel(level),
+  setConsoleEnabled: (enabled: boolean) => getLogger().setConsoleEnabled(enabled),
+  setQuiet: (quiet: boolean) => getLogger().setQuiet(quiet),
   close: () => {
     if (loggerInstance) {
       loggerInstance.close();

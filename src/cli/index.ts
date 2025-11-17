@@ -6,6 +6,7 @@ import { registerQuoteCommand } from './commands/quote.js';
 import { registerFetchCommand } from './commands/fetch.js';
 import { registerWatchlistCommands } from './commands/watchlist.js';
 import { registerStreamCommand } from './commands/stream.js';
+import { logger } from '../infra/logger.js';
 
 const program = new Command();
 
@@ -30,15 +31,44 @@ export const commonOptions = {
   },
   output: (cmd: Command) => {
     cmd.option('-o, --output <path>', 'Output file path');
-    cmd.option('-f, --format <format>', 'Output format (json/csv for fetch, json/table for quote)', 'json');
+    cmd.option('-f, --format <format>', 'Output format (json/table/text)', 'json');
+    return cmd;
+  },
+  logging: (cmd: Command) => {
+    cmd
+      .option('--verbose', 'Enable verbose logging (debug level)')
+      .option('--quiet', 'Disable all output (including data), only errors are shown');
     return cmd;
   },
 };
 
+/**
+ * Apply logging options from command line arguments
+ * --quiet: Disable all output (including data), only errors are shown
+ * --verbose: Enable verbose logging (debug level)
+ */
+export function applyLoggingOptions(options: { verbose?: boolean; quiet?: boolean }): void {
+  // Validate that verbose and quiet are not both set
+  if (options.verbose && options.quiet) {
+    throw new Error('Cannot use --verbose and --quiet together');
+  }
+
+  if (options.verbose) {
+    logger.setLevel('debug');
+    logger.setQuiet(false);
+  } else if (options.quiet) {
+    logger.setQuiet(true);
+    logger.setLevel('error'); // Errors are still shown
+  } else {
+    logger.setQuiet(false);
+    // Use default from config
+  }
+}
+
 // Register all commands
 registerQuoteCommand(program, commonOptions);
 registerFetchCommand(program, commonOptions);
-registerWatchlistCommands(program);
+registerWatchlistCommands(program, commonOptions);
 registerStreamCommand(program, commonOptions);
 
 // Parse command line arguments

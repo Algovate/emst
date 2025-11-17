@@ -33,7 +33,7 @@ npm install emst
 全局安装后，可以直接使用 `emst` 命令：
 
 ```bash
-emst --code 688005
+emst fetch --code 688005
 emst quote --code 688005
 emst watchlist add 688005
 ```
@@ -55,31 +55,31 @@ npm run build
 
 ```bash
 # 获取日线K线数据
-emst --code 688005
-# 或从源码运行: npm run start -- --code 688005
+emst fetch --code 688005
+# 或从源码运行: npm run start -- fetch --code 688005
 
 # 指定时间周期
-emst --code 688005 --timeframe weekly
+emst fetch --code 688005 --timeframe weekly
 
 # 指定日期范围
-emst --code 688005 --start 20240101 --end 20241231
+emst fetch --code 688005 --start 20240101 --end 20241231
 
 # 保存到文件
-emst --code 688005 --output data.json
+emst fetch --code 688005 --output data.json
 
-# 导出为CSV
-emst --code 688005 --output data.csv --format csv
+# 导出为CSV（通过文件扩展名自动识别）
+emst fetch --code 688005 --output data.csv
 
 # 不同市场（A股代码会自动检测市场，无需指定）
-emst --code 000001              # 深圳（自动检测）
-emst --code 688005              # 上海（自动检测）
-emst --code 00700 --market 116  # 港股（需要指定）
-emst --code AAPL --market 105   # 美股（需要指定）
+emst fetch --code 000001              # 深圳（自动检测）
+emst fetch --code 688005              # 上海（自动检测）
+emst fetch --code 00700 --market 116  # 港股（需要指定）
+emst fetch --code AAPL --market 105   # 美股（需要指定）
 
 # 复权类型
-emst --code 688005 --fqt 0  # 不复权
-emst --code 688005 --fqt 1  # 前复权（默认）
-emst --code 688005 --fqt 2  # 后复权
+emst fetch --code 688005 --fqt 0  # 不复权
+emst fetch --code 688005 --fqt 1  # 前复权（默认）
+emst fetch --code 688005 --fqt 2  # 后复权
 
 # 获取实时行情
 emst quote --code 688005
@@ -118,27 +118,34 @@ emst watchlist sync --timeframe weekly
 - `-t, --timeframe <timeframe>`: 时间周期（daily/weekly/monthly/5min/15min/30min/60min，默认：daily）
 - `-s, --start <date>`: 开始日期（YYYYMMDD）
 - `-e, --end <date>`: 结束日期（YYYYMMDD）
-- `-o, --output <path>`: 输出文件路径
-- `-f, --format <format>`: 输出格式（json/csv，默认：json）
+- `-o, --output <path>`: 输出文件路径（如果扩展名为 .csv，自动使用 CSV 格式）
+- `-f, --format <format>`: 输出格式（json/table/text，默认：json）
 - `--fqt <0|1|2>`: 复权类型（0=不复权，1=前复权，2=后复权，默认：1）
 - `--no-cache`: 绕过缓存
+- `--verbose`: 启用详细日志（debug 级别）
+- `--quiet`: 禁用所有输出（包括数据），仅显示错误
 
 **实时行情命令：**
 
 - `quote --code <code> [--market <market>] [--format <format>]`: 获取实时行情快照
+  - `--format <format>`: 输出格式（json/table/text，默认：table）
 
 **实时流命令：**
 
 - `stream --code <code> [--market <market>]`: 实时监控单个股票
 - `stream --watchlist`: 监控自选股列表
 - `--types <types>`: 订阅类型（quote,trend,detail,news，默认：quote）
-- `--format <format>`: 输出格式（table/json，默认：table）
+- `--format <format>`: 输出格式（json/table/text，默认：table）
 
 **自选股命令：**
 
 - `watchlist add <code> [--market <market>]`: 添加股票
 - `watchlist remove <code>`: 移除股票
-- `watchlist list`: 列出所有
+- `watchlist list [--info] [--format <format>]`: 列出所有
+  - `--info`: 显示详细信息（包含缓存统计）
+  - `--format <format>`: 输出格式（json/table/text，默认：text）
+- `watchlist check [--format <format>]`: 检查市场代码
+  - `--format <format>`: 输出格式（json/table/text，默认：text）
 - `watchlist sync [--timeframe <timeframe>] [--force]`: 同步数据
 
 ## 缓存

@@ -94,10 +94,10 @@ emst 使用本地缓存系统存储K线数据，减少API调用并提高性能�
 
 ```bash
 # 如果缓存可用且有效则使用缓存
-npm run start -- --code 688005
+emst fetch --code 688005
 
 # 绕过缓存
-npm run start -- --code 688005 --no-cache
+emst fetch --code 688005 --no-cache
 ```
 
 ### 获取时的缓存
@@ -141,7 +141,7 @@ rm -rf .emst/cache/*
 
 ```bash
 # 同步日线数据（缓存有效24小时）
-npm run start -- watchlist sync --timeframe daily
+emst watchlist sync --timeframe daily
 ```
 
 ### 日内数据
@@ -150,7 +150,7 @@ npm run start -- watchlist sync --timeframe daily
 
 ```bash
 # 同步5分钟数据（可能需要更频繁的更新）
-npm run start -- watchlist sync --timeframe 5min --force
+emst watchlist sync --timeframe 5min --force
 ```
 
 ### 历史数据
@@ -159,7 +159,7 @@ npm run start -- watchlist sync --timeframe 5min --force
 
 ```bash
 # 同步历史数据（缓存可以无限期保存）
-npm run start -- watchlist sync --start 20200101 --end 20231231
+emst watchlist sync --start 20200101 --end 20231231
 ```
 
 ## 性能考虑
@@ -190,7 +190,7 @@ npm run start -- watchlist sync --start 20200101 --end 20231231
 
 ```bash
 # 强制刷新
-npm run start -- watchlist sync --force
+emst watchlist sync --force
 ```
 
 ### 缓存损坏
