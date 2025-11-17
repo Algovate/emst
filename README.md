@@ -1,6 +1,6 @@
 # emst
 
-一个用于从东方财富获取股票数据的爬虫工具。
+东方财富股票数据工具。
 
 [![npm version](https://img.shields.io/npm/v/emst.svg)](https://www.npmjs.com/package/emst)
 [![npm](https://img.shields.io/npm/dm/emst.svg)](https://www.npmjs.com/package/emst)
