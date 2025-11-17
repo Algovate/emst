@@ -1,11 +1,9 @@
 # emst
 
-东方财富股票数据工具。
+[东方财富](https://quote.eastmoney.com/)股票数据工具。
 
 [![npm version](https://img.shields.io/npm/v/emst.svg)](https://www.npmjs.com/package/emst)
 [![npm](https://img.shields.io/npm/dm/emst.svg)](https://www.npmjs.com/package/emst)
-
-📦 **npm 包**: [https://www.npmjs.com/package/emst](https://www.npmjs.com/package/emst)
 
 ## 功能特性
 
