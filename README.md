@@ -4,8 +4,10 @@
 
 [![npm version](https://img.shields.io/npm/v/emst.svg)](https://www.npmjs.com/package/emst)
 [![npm](https://img.shields.io/npm/dm/emst.svg)](https://www.npmjs.com/package/emst)
+[![GitHub](https://img.shields.io/github/stars/Algovate/emst?style=social)](https://github.com/Algovate/emst)
 
 📦 **npm 包**: [https://www.npmjs.com/package/emst](https://www.npmjs.com/package/emst)
+🔗 **GitHub 仓库**: [https://github.com/Algovate/emst](https://github.com/Algovate/emst)
 
 ## 功能特性
 
@@ -21,13 +23,17 @@
 
 ## 安装
 
-### 作为 npm 包使用
+### 作为 npm 包使用（推荐）
 
 ```bash
+# 全局安装
 npm install -g emst
+
+# 或作为项目依赖安装
+npm install emst
 ```
 
-安装后，可以直接使用 `emst` 命令：
+全局安装后，可以直接使用 `emst` 命令：
 
 ```bash
 emst --code 688005
@@ -38,7 +44,7 @@ emst watchlist add 688005
 ### 从源码安装
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Algovate/emst.git
 cd emst
 npm install
 npm run build
@@ -139,7 +145,18 @@ emst watchlist sync --timeframe weekly
 
 ## 文档
 
-详细文档请参阅 [docs/](docs/) 目录。
+详细文档请参阅 [docs/](docs/) 目录：
+
+- [API 文档](docs/api.md) - 完整的 API 参考
+- [使用示例](docs/examples.md) - 更多使用示例
+- [缓存机制](docs/cache.md) - 缓存系统说明
+- [自选股管理](docs/watchlist.md) - 自选股功能详解
+
+## 相关链接
+
+- 📦 [npm 包页面](https://www.npmjs.com/package/emst)
+- 🐛 [问题反馈](https://github.com/Algovate/emst/issues)
+- 💡 [功能建议](https://github.com/Algovate/emst/issues)
 
 ## 许可证
 
