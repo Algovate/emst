@@ -4,10 +4,8 @@
 
 [![npm version](https://img.shields.io/npm/v/emst.svg)](https://www.npmjs.com/package/emst)
 [![npm](https://img.shields.io/npm/dm/emst.svg)](https://www.npmjs.com/package/emst)
-[![GitHub](https://img.shields.io/github/stars/Algovate/emst?style=social)](https://github.com/Algovate/emst)
 
 📦 **npm 包**: [https://www.npmjs.com/package/emst](https://www.npmjs.com/package/emst)
-🔗 **GitHub 仓库**: [https://github.com/Algovate/emst](https://github.com/Algovate/emst)
 
 ## 功能特性
 
