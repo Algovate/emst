@@ -12,12 +12,17 @@ import {
   TIMEFRAME_MAP,
   RealtimeQuote,
   RealtimeQuoteResponse,
+  SSEStreamOptions,
+  SSEStreamCallback,
+  SSEErrorCallback,
+  SSEConnectionType,
 } from '../infra/types.js';
 import { buildSecid, parseJSONPResponse, parseKlineRecord } from '../utils/utils.js';
 import { getConfig } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
 import { parseKlineResponseData, parseKlineResponseObject } from './response-parser.js';
 import { SAMPLE_LIMIT, DEFAULT_END_DATE, KLINE_FIELDS, REALTIME_FIELDS, ERROR_MESSAGES } from '../infra/constants.js';
+import { SSEStreamManager } from './sse-stream-manager.js';
 
 /**
  * East Money K-line data crawler
@@ -31,6 +36,7 @@ export class EastMoneyCrawler {
   private useBrowser: boolean;
   private browserManager: BrowserManager | null = null;
   private readonly config = getConfig();
+  private sseStreamManager: SSEStreamManager | null = null;
 
   constructor() {
     this.apiBaseUrl = this.config.api?.baseUrl || 'https://push2his.eastmoney.com/api/qt/stock/kline/get';
@@ -630,6 +636,56 @@ export class EastMoneyCrawler {
         );
       }
     }
+  }
+
+  /**
+   * Get SSE stream manager instance
+   */
+  private getSSEStreamManager(): SSEStreamManager {
+    if (!this.sseStreamManager) {
+      this.sseStreamManager = new SSEStreamManager();
+    }
+    return this.sseStreamManager;
+  }
+
+  /**
+   * Start SSE stream for real-time data
+   */
+  async startSSEStream(
+    options: SSEStreamOptions,
+    onData: SSEStreamCallback,
+    onError?: SSEErrorCallback
+  ): Promise<void> {
+    const manager = this.getSSEStreamManager();
+    await manager.startStream(options, onData, onError);
+  }
+
+  /**
+   * Stop SSE stream for a stock
+   */
+  stopSSEStream(code: string, market: Market): void {
+    if (this.sseStreamManager) {
+      this.sseStreamManager.stopStream(code, market);
+    }
+  }
+
+  /**
+   * Stop all SSE streams
+   */
+  stopAllSSEStreams(): void {
+    if (this.sseStreamManager) {
+      this.sseStreamManager.stopAll();
+    }
+  }
+
+  /**
+   * Get latest SSE data for a stock
+   */
+  getLatestSSEData(code: string, market: Market, type: SSEConnectionType): any {
+    if (this.sseStreamManager) {
+      return this.sseStreamManager.getLatestData(code, market, type);
+    }
+    return null;
   }
 }
 

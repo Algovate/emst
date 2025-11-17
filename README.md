@@ -14,7 +14,8 @@
 - 支持多个市场（A股、港股、美股）的K线数据获取
 - 支持股票、指数、基金和ETF
 - 支持多种时间周期：日线、周线、月线，以及日内数据（5分钟、15分钟、30分钟、60分钟）
-- 实时行情获取
+- 实时行情获取（REST API）
+- **SSE实时数据流**：支持实时行情、分时走势、成交明细的实时推送
 - 支持导出为 JSON 或 CSV 格式
 - 日期范围筛选
 - 复权价格支持（不复权/前复权/后复权）
@@ -86,6 +87,11 @@ emst --code 688005 --fqt 2  # 后复权
 
 # 获取实时行情
 emst quote --code 688005
+
+# 实时数据流（SSE）
+emst stream --code 688005
+emst stream --code 688005 --types quote,trend,detail
+emst stream --watchlist
 ```
 
 ### 自选股管理
@@ -120,6 +126,17 @@ emst watchlist sync --timeframe weekly
 - `-f, --format <format>`: 输出格式（json/csv，默认：json）
 - `--fqt <0|1|2>`: 复权类型（0=不复权，1=前复权，2=后复权，默认：1）
 - `--no-cache`: 绕过缓存
+
+**实时行情命令：**
+
+- `quote --code <code> [--market <market>] [--format <format>]`: 获取实时行情快照
+
+**实时流命令：**
+
+- `stream --code <code> [--market <market>]`: 实时监控单个股票
+- `stream --watchlist`: 监控自选股列表
+- `--types <types>`: 订阅类型（quote,trend,detail,news，默认：quote）
+- `--format <format>`: 输出格式（table/json，默认：table）
 
 **自选股命令：**
 

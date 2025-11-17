@@ -190,3 +190,107 @@ export interface RealtimeQuoteResponse {
   };
 }
 
+/**
+ * SSE connection types
+ */
+export enum SSEConnectionType {
+  QUOTE = 'quote',        // 实时行情
+  TREND = 'trend',        // 分时走势
+  DETAIL = 'detail',      // 成交明细
+  NEWS = 'news'           // 新闻推送
+}
+
+/**
+ * SSE real-time quote data (extends RealtimeQuote with additional SSE fields)
+ */
+export interface SSEQuoteData extends RealtimeQuote {
+  svr?: number;           // Server ID
+  rawData?: {             // Raw field data
+    [key: string]: any;
+  };
+  buy1Price?: number;     // 买一价 (f51)
+  sell1Price?: number;    // 卖一价 (f52)
+  buy1Volume?: number;    // 买一量 (f161)
+  buy2Volume?: number;    // 买二量 (f162)
+  buy3Volume?: number;    // 买三量 (f163)
+  buy4Volume?: number;    // 买四量 (f164)
+  sell1Volume?: number;   // 卖一量 (f167)
+  sell2Volume?: number;   // 卖二量 (f168)
+  sell3Volume?: number;   // 卖三量 (f169)
+  sell4Volume?: number;   // 卖四量 (f170)
+  volumeRatio?: number;   // 量比 (f92)
+  turnoverRate?: number;  // 换手率 (f107)
+  peRatio?: number;       // 市盈率 (f111)
+}
+
+/**
+ * SSE trend data (分时走势数据)
+ */
+export interface SSETrendData {
+  time: string;           // 时间 "HH:MM:SS" or "YYYY-MM-DD HH:MM:SS"
+  price: number;          // 最新价
+  high: number;           // 最高
+  low: number;            // 最低
+  open: number;           // 开盘
+  volume: number;         // 成交量
+  amount: number;         // 成交额
+  avgPrice: number;       // 均价
+}
+
+/**
+ * SSE detail data (成交明细数据)
+ */
+export interface SSEDetailData {
+  time: string;           // 时间 "HH:MM:SS"
+  price: number;          // 成交价格
+  volume: number;         // 成交量
+  direction: 'buy' | 'sell'; // 买卖方向
+  type: number;           // 成交类型（1=普通, 3=大单, 4=特大单）
+}
+
+/**
+ * SSE news data (新闻推送数据)
+ */
+export interface SSENewsData {
+  type: string;
+  seq: number;
+  content: string;
+  timestamp?: number;
+}
+
+/**
+ * SSE stream options
+ */
+export interface SSEStreamOptions {
+  code: string;
+  market: Market;
+  types?: SSEConnectionType[];  // 订阅的连接类型，默认只订阅quote
+  reconnectInterval?: number;   // 重连间隔（毫秒），默认5000
+  maxReconnectAttempts?: number; // 最大重连次数，默认10
+  heartbeatTimeout?: number;     // 心跳超时（毫秒），默认30000
+}
+
+/**
+ * SSE stream callback function type
+ * For news type, data can be string; for others, it's SSERawResponse
+ */
+export type SSEStreamCallback<T = SSERawResponse | string> = (data: T, type: SSEConnectionType) => void;
+
+/**
+ * SSE error callback function type
+ */
+export type SSEErrorCallback = (error: Error, type: SSEConnectionType) => void;
+
+/**
+ * Raw SSE message response structure
+ */
+export interface SSERawResponse {
+  rc: number;             // Return code (0 = success)
+  rt: number;             // Response type (2=heartbeat, 4=quote, 10=trend, 12=detail)
+  svr: number;            // Server ID
+  lt: number;             // Data type
+  full: number;           // Full data flag
+  dlmkts: string;         // Delisted markets
+  data: any;              // Data payload (varies by type)
+}
+

@@ -5,6 +5,7 @@ import { getMarketHelpText } from '../utils/utils.js';
 import { registerQuoteCommand } from './commands/quote.js';
 import { registerFetchCommand } from './commands/fetch.js';
 import { registerWatchlistCommands } from './commands/watchlist.js';
+import { registerStreamCommand } from './commands/stream.js';
 
 const program = new Command();
 
@@ -38,6 +39,7 @@ export const commonOptions = {
 registerQuoteCommand(program, commonOptions);
 registerFetchCommand(program, commonOptions);
 registerWatchlistCommands(program);
+registerStreamCommand(program, commonOptions);
 
 // Parse command line arguments
 program.parse();

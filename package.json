@@ -23,12 +23,14 @@
     "axios-cookiejar-support": "^6.0.4",
     "commander": "^11.1.0",
     "csv-writer": "^1.6.0",
+    "eventsource": "^2.0.2",
     "puppeteer": "^24.30.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "tough-cookie": "^6.0.0"
   },
   "devDependencies": {
+    "@types/eventsource": "^1.1.15",
     "@types/node": "^20.10.0",
     "@types/puppeteer": "^5.4.7",
     "@types/tough-cookie": "^4.0.5",
