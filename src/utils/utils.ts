@@ -1,5 +1,6 @@
 import { KlineData, RealtimeQuote, Timeframe } from '../infra/types.js';
 import { Market } from '../infra/types.js';
+import { logger } from '../infra/logger.js';
 
 /**
  * Parse a comma-separated K-line record string into KlineData object
@@ -307,7 +308,8 @@ export function getAdjustmentTypeName(fqt: number): string {
  */
 export function handleError(error: unknown, exitCode: number = 1): never {
   const message = error instanceof Error ? error.message : String(error);
-  console.error('Error:', message);
+  logger.error('Error:', message);
+  // Exit immediately - logger writes to stderr synchronously
   process.exit(exitCode);
 }
 

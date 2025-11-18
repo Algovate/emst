@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { logger } from '../infra/logger.js';
 
 /**
  * Singleton browser manager for Puppeteer
@@ -43,7 +44,7 @@ class BrowserManager {
         const puppeteerExtra = addExtra(puppeteer);
         puppeteerExtra.use(StealthPlugin());
 
-        console.log('Launching browser with stealth plugin...');
+        logger.info('Launching browser with stealth plugin...');
         
         this.browser = await puppeteerExtra.launch({
           headless: true,
@@ -60,11 +61,11 @@ class BrowserManager {
           ],
         });
 
-        console.log('Browser launched successfully');
+        logger.info('Browser launched successfully');
 
         // Handle browser disconnect
         this.browser.on('disconnected', () => {
-          console.log('Browser disconnected');
+          logger.info('Browser disconnected');
           this.browser = null;
           this.isInitializing = false;
           this.initPromise = null;
@@ -119,7 +120,7 @@ class BrowserManager {
    */
   public async close(): Promise<void> {
     if (this.browser) {
-      console.log('Closing browser...');
+      logger.info('Closing browser...');
       await this.browser.close();
       this.browser = null;
       this.isInitializing = false;
@@ -139,7 +140,7 @@ class BrowserManager {
 process.on('exit', () => {
   const manager = BrowserManager.getInstance();
   if (manager.isRunning()) {
-    console.log('Process exiting, cleaning up browser...');
+    logger.info('Process exiting, cleaning up browser...');
   }
 });
 

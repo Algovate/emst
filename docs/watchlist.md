@@ -12,43 +12,43 @@
 
 ```bash
 # 添加上海市场股票（自动检测）
-emst watchlist add 688005
+emst stock watchlist add 688005
 
 # 添加深圳市场股票（自动检测）
-emst watchlist add 000001
+emst stock watchlist add 000001
 
 # 显式指定市场添加
-emst watchlist add 600000 --market 1
-emst watchlist add 000002 --market 0
+emst stock watchlist add 600000 --market 1
+emst stock watchlist add 000002 --market 0
 
 # 添加港股（需要指定市场）
-emst watchlist add 00700 --market 116
+emst stock watchlist add 00700 --market 116
 
 # 添加美股（需要指定市场）
-emst watchlist add AAPL --market 105
+emst stock watchlist add AAPL --market 105
 ```
 
 ### 移除股票
 
 ```bash
 # 从自选股中移除
-emst watchlist remove 688005
+emst stock watchlist remove 688005
 ```
 
 ### 列出股票
 
 ```bash
 # 列出所有自选股（基本信息，文本格式）
-emst watchlist list
+emst stock watchlist list
 
 # 列出详细信息（包含缓存统计）
-emst watchlist list --info
+emst stock watchlist list --info
 
 # JSON格式输出
-emst watchlist list --format json
+emst stock watchlist list --format json
 
 # 表格格式输出
-emst watchlist list --format table
+emst stock watchlist list --format table
 ```
 
 **基本输出示例（文本格式）：**
@@ -114,19 +114,19 @@ Watchlist (1 symbols):
 
 ```bash
 # 同步所有股票的所有时间周期（默认行为）
-emst watchlist sync
+emst stock watchlist sync
 
 # 仅同步指定时间周期
-emst watchlist sync --timeframe weekly
+emst stock watchlist sync --timeframe weekly
 
 # 指定日期范围同步（适用于所有时间周期）
-emst watchlist sync --start 20240101 --end 20241231
+emst stock watchlist sync --start 20240101 --end 20241231
 
 # 强制刷新（忽略缓存）
-emst watchlist sync --force
+emst stock watchlist sync --force
 
 # 组合选项
-emst watchlist sync --timeframe daily --start 20240101 --force
+emst stock watchlist sync --timeframe daily --start 20240101 --force
 ```
 
 ### 默认行为：所有时间周期
@@ -165,19 +165,19 @@ Sync complete: 7 succeeded, 0 failed
 
 ```bash
 # 仅同步日线数据
-emst watchlist sync --timeframe daily
+emst stock watchlist sync --timeframe daily
 
 # 仅同步周线数据
-emst watchlist sync --timeframe weekly
+emst stock watchlist sync --timeframe weekly
 
 # 仅同步月线数据
-emst watchlist sync --timeframe monthly
+emst stock watchlist sync --timeframe monthly
 
 # 仅同步日内数据（5min, 15min, 30min, 60min）
-emst watchlist sync --timeframe 5min
-emst watchlist sync --timeframe 15min
-emst watchlist sync --timeframe 30min
-emst watchlist sync --timeframe 60min
+emst stock watchlist sync --timeframe 5min
+emst stock watchlist sync --timeframe 15min
+emst stock watchlist sync --timeframe 30min
+emst stock watchlist sync --timeframe 60min
 ```
 
 **注意：** 每个时间周期都是单独缓存的。您可以同时为同一只股票缓存日线、周线、月线和日内数据。
@@ -245,10 +245,10 @@ Sync complete: 2 succeeded, 1 failed
 
 ```bash
 # 检查自选股市场代码（文本格式，默认）
-emst watchlist check
+emst stock watchlist check
 
 # JSON格式输出
-emst watchlist check --format json
+emst stock watchlist check --format json
 ```
 
 ### 股票未找到

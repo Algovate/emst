@@ -20,6 +20,7 @@ import {
   CrawlerOptions,
   AdjustmentType,
 } from '../infra/types.js';
+import { logger } from '../infra/logger.js';
 
 /**
  * All available timeframes
@@ -389,7 +390,7 @@ export async function syncWatchlist(options: SyncOptions = {}): Promise<SyncResu
           results.push(...entryResults);
         } catch (error) {
           // If batch fetch fails, fall back to individual fetches
-          console.warn(`Batch fetch failed for ${entry.code}, falling back to individual fetches:`, error instanceof Error ? error.message : String(error));
+          logger.warn(`Batch fetch failed for ${entry.code}, falling back to individual fetches:`, error instanceof Error ? error.message : String(error));
           for (const timeframe of timeframesToSync) {
             const result = await syncSymbol(entry, { ...options, timeframe }, crawler);
             results.push(result);

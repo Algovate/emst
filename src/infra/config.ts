@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { Market, AdjustmentType } from './types.js';
+import { logger } from './logger.js';
 
 /**
  * Configuration interface
@@ -96,7 +97,7 @@ function loadConfigFile(): Partial<Config> {
     const content = readFileSync(CONFIG_FILE, 'utf-8');
     return JSON.parse(content) as Partial<Config>;
   } catch (error) {
-    console.warn(`Failed to load config file: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn(`Failed to load config file: ${error instanceof Error ? error.message : String(error)}`);
     return {};
   }
 }

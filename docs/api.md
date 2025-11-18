@@ -302,6 +302,71 @@ const crawler = new EastMoneyCrawler();
 const quote = await crawler.getRealtimeQuote('688005', Market.Shanghai);
 ```
 
+## 快讯新闻 API
+
+`fetchFastNews()` 方法获取财经快讯列表：
+
+```typescript
+const crawler = new EastMoneyCrawler();
+
+// 获取默认快讯列表
+const news = await crawler.fetchFastNews();
+
+// 指定分类和数量
+const news = await crawler.fetchFastNews({
+  category: 'live_724',  // 7x24小时快讯
+  pageSize: 100
+});
+```
+
+### FastNewsOptions
+
+```typescript
+interface FastNewsOptions {
+  category?: FastNewsCategory | string;  // 新闻分类或 fastColumn ID
+  pageSize?: number;                     // 每页数量（1-200，默认：50）
+}
+```
+
+### FastNewsListResponse
+
+```typescript
+interface FastNewsListResponse {
+  items: FastNewsItem[];
+  total?: number;
+  pageSize?: number;
+  category?: string;
+}
+```
+
+### FastNewsItem
+
+```typescript
+interface FastNewsItem {
+  id: string;              // 新闻ID
+  title: string;           // 标题
+  content: string;         // 内容摘要
+  time: string;            // 时间字符串
+  timestamp?: number;      // 时间戳（毫秒）
+  source?: string;         // 来源
+  url: string;             // 全文链接
+  category?: string;       // 分类
+}
+```
+
+### FastNewsCategory
+
+支持的新闻分类枚举：
+
+```typescript
+enum FastNewsCategory {
+  LIVE_724 = 'live_724',    // 7x24小时快讯
+  FOCUS = 'focus',          // 焦点新闻
+  BOND = 'bond',            // 债券新闻
+  // ... 更多分类
+}
+```
+
 ### RealtimeQuote 接口
 
 ```typescript

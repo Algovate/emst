@@ -12,6 +12,7 @@
 - 支持多种时间周期：日线、周线、月线，以及日内数据（5分钟、15分钟、30分钟、60分钟）
 - 实时行情获取（REST API）
 - **SSE实时数据流**：支持实时行情、分时走势、成交明细的实时推送
+- **快讯新闻**：支持获取和实时流式推送财经快讯
 - 支持导出为 JSON 或 CSV 格式
 - 日期范围筛选
 - 复权价格支持（不复权/前复权/后复权）
@@ -33,9 +34,10 @@ npm install emst
 全局安装后，可以直接使用 `emst` 命令：
 
 ```bash
-emst fetch --code 688005
-emst quote --code 688005
-emst watchlist add 688005
+emst stock fetch --code 688005
+emst stock quote --code 688005
+emst stock watchlist add 688005
+emst news list
 ```
 
 ### 从源码安装
@@ -55,66 +57,78 @@ npm run build
 
 ```bash
 # 获取日线K线数据
-emst fetch --code 688005
-# 或从源码运行: npm run start -- fetch --code 688005
+emst stock fetch --code 688005
+# 或从源码运行: npm run start -- stock fetch --code 688005
 
 # 指定时间周期
-emst fetch --code 688005 --timeframe weekly
+emst stock fetch --code 688005 --timeframe weekly
 
 # 指定日期范围
-emst fetch --code 688005 --start 20240101 --end 20241231
+emst stock fetch --code 688005 --start 20240101 --end 20241231
 
 # 保存到文件
-emst fetch --code 688005 --output data.json
+emst stock fetch --code 688005 --output data.json
 
 # 导出为CSV（通过文件扩展名自动识别）
-emst fetch --code 688005 --output data.csv
+emst stock fetch --code 688005 --output data.csv
 
 # 不同市场（A股代码会自动检测市场，无需指定）
-emst fetch --code 000001              # 深圳（自动检测）
-emst fetch --code 688005              # 上海（自动检测）
-emst fetch --code 00700 --market 116  # 港股（需要指定）
-emst fetch --code AAPL --market 105   # 美股（需要指定）
+emst stock fetch --code 000001              # 深圳（自动检测）
+emst stock fetch --code 688005              # 上海（自动检测）
+emst stock fetch --code 00700 --market 116  # 港股（需要指定）
+emst stock fetch --code AAPL --market 105   # 美股（需要指定）
 
 # 复权类型
-emst fetch --code 688005 --fqt 0  # 不复权
-emst fetch --code 688005 --fqt 1  # 前复权（默认）
-emst fetch --code 688005 --fqt 2  # 后复权
+emst stock fetch --code 688005 --fqt 0  # 不复权
+emst stock fetch --code 688005 --fqt 1  # 前复权（默认）
+emst stock fetch --code 688005 --fqt 2  # 后复权
 
 # 获取实时行情
-emst quote --code 688005
+emst stock quote --code 688005
 
 # 实时数据流（SSE）
-emst stream --code 688005
-emst stream --code 688005 --types quote,trend,detail
-emst stream --watchlist
+emst stock stream --code 688005
+emst stock stream --code 688005 --types quote,trend,detail
+emst stock stream --watchlist
 ```
 
 ### 自选股管理
 
 ```bash
 # 添加股票（A股代码会自动检测市场）
-emst watchlist add 688005       # 上海（自动检测）
-emst watchlist add 000001       # 深圳（自动检测）
-emst watchlist add 00700 --market 116  # 港股（需要指定）
-emst watchlist add AAPL --market 105   # 美股（需要指定）
+emst stock watchlist add 688005       # 上海（自动检测）
+emst stock watchlist add 000001       # 深圳（自动检测）
+emst stock watchlist add 00700 --market 116  # 港股（需要指定）
+emst stock watchlist add AAPL --market 105   # 美股（需要指定）
 
 # 列出自选股
-emst watchlist list
+emst stock watchlist list
 
 # 同步自选股
-emst watchlist sync
+emst stock watchlist sync
 
 # 同步指定时间周期
-emst watchlist sync --timeframe weekly
+emst stock watchlist sync --timeframe weekly
+```
+
+### 新闻功能
+
+```bash
+# 获取快讯列表（REST API）
+emst news list
+emst news list --category live_724  # 指定分类
+emst news list --page-size 100      # 指定数量
+
+# 实时新闻流（SSE）
+emst news stream
 ```
 
 ### 命令行选项
 
-**获取命令：**
+**股票获取命令 (`stock fetch`)：**
 
 - `-c, --code <code>`: 股票代码（必需）
-- `-m, --market <market>`: 市场代码（0=深圳，1=上海，105=美股，116=港股，默认：1）
+- `-m, --market <market>`: 市场代码（0=深圳，1=上海，105=美股，116=港股）。A股代码会自动检测，无需指定
 - `-t, --timeframe <timeframe>`: 时间周期（daily/weekly/monthly/5min/15min/30min/60min，默认：daily）
 - `-s, --start <date>`: 开始日期（YYYYMMDD）
 - `-e, --end <date>`: 结束日期（YYYYMMDD）
@@ -125,28 +139,37 @@ emst watchlist sync --timeframe weekly
 - `--verbose`: 启用详细日志（debug 级别）
 - `--quiet`: 禁用所有输出（包括数据），仅显示错误
 
-**实时行情命令：**
+**实时行情命令 (`stock quote`)：**
 
-- `quote --code <code> [--market <market>] [--format <format>]`: 获取实时行情快照
+- `stock quote --code <code> [--market <market>] [--format <format>]`: 获取实时行情快照
   - `--format <format>`: 输出格式（json/table/text，默认：table）
 
-**实时流命令：**
+**实时流命令 (`stock stream`)：**
 
-- `stream --code <code> [--market <market>]`: 实时监控单个股票
-- `stream --watchlist`: 监控自选股列表
+- `stock stream --code <code> [--market <market>]`: 实时监控单个股票
+- `stock stream --watchlist`: 监控自选股列表
 - `--types <types>`: 订阅类型（quote,trend,detail,news，默认：quote）
 - `--format <format>`: 输出格式（json/table/text，默认：table）
 
-**自选股命令：**
+**自选股命令 (`stock watchlist`)：**
 
-- `watchlist add <code> [--market <market>]`: 添加股票
-- `watchlist remove <code>`: 移除股票
-- `watchlist list [--info] [--format <format>]`: 列出所有
+- `stock watchlist add <code> [--market <market>]`: 添加股票
+- `stock watchlist remove <code>`: 移除股票
+- `stock watchlist list [--info] [--format <format>]`: 列出所有
   - `--info`: 显示详细信息（包含缓存统计）
   - `--format <format>`: 输出格式（json/table/text，默认：text）
-- `watchlist check [--format <format>]`: 检查市场代码
+- `stock watchlist check [--format <format>]`: 检查市场代码
   - `--format <format>`: 输出格式（json/table/text，默认：text）
-- `watchlist sync [--timeframe <timeframe>] [--force]`: 同步数据
+- `stock watchlist sync [--timeframe <timeframe>] [--force]`: 同步数据
+
+**新闻命令 (`news`)：**
+
+- `news list [--category <category>] [--page-size <size>] [--format <format>]`: 获取快讯列表
+  - `--category <category>`: 新闻分类（live_724, focus, bond 等）或 fastColumn ID
+  - `--page-size <size>`: 每页数量（1-200，默认：50）
+  - `--format <format>`: 输出格式（json/table/text，默认：text）
+- `news stream [--format <format>]`: 实时新闻流（SSE）
+  - `--format <format>`: 输出格式（json/table/text，默认：text）
 
 ## 缓存
 
