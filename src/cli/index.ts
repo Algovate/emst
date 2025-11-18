@@ -6,11 +6,10 @@ suppressKnownDeprecationWarnings();
 
 import { Command } from 'commander';
 import { getMarketHelpText } from '../utils/utils.js';
-import { registerQuoteCommand } from './commands/quote.js';
-import { registerFetchCommand } from './commands/fetch.js';
-import { registerWatchlistCommands } from './commands/watchlist.js';
-import { registerStreamCommand } from './commands/stream.js';
+import { registerStockCommands } from './commands/stock.js';
+import { registerNewsCommand } from './commands/news.js';
 import { logger } from '../infra/logger.js';
+import { CommonOptions } from './types.js';
 
 const program = new Command();
 
@@ -20,8 +19,12 @@ program
   .version('1.0.0');
 
 // Common option definitions
-export const commonOptions = {
+export const commonOptions: CommonOptions = {
   market: (cmd: Command) => cmd.option('-m, --market <market>', getMarketHelpText(), '1'),
+  marketOptional: (cmd: Command) => cmd.option(
+    '-m, --market <market>',
+    'Market code (0=Shenzhen, 1=Shanghai, 105=US, 116=HK). Auto-detected for A-share codes if not provided.'
+  ),
   code: (cmd: Command) => cmd.requiredOption('-c, --code <code>', 'Stock code (e.g., 688005 for A-share, 00700 for HK, AAPL for US)'),
   timeframe: (cmd: Command) => cmd.option(
     '-t, --timeframe <timeframe>',
@@ -35,7 +38,7 @@ export const commonOptions = {
   },
   output: (cmd: Command) => {
     cmd.option('-o, --output <path>', 'Output file path');
-    cmd.option('-f, --format <format>', 'Output format (json/table/text)', 'json');
+    // Format option is handled separately in each command with getFormatOptionHelp
     return cmd;
   },
   logging: (cmd: Command) => {
@@ -70,10 +73,8 @@ export function applyLoggingOptions(options: { verbose?: boolean; quiet?: boolea
 }
 
 // Register all commands
-registerQuoteCommand(program, commonOptions);
-registerFetchCommand(program, commonOptions);
-registerWatchlistCommands(program, commonOptions);
-registerStreamCommand(program, commonOptions);
+registerStockCommands(program, commonOptions);
+registerNewsCommand(program, commonOptions);
 
 // Parse command line arguments
 program.parse();

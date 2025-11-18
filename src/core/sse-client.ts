@@ -30,6 +30,16 @@ export class SSEClient {
 
 
   /**
+   * Get connection description for logging
+   */
+  private getConnectionDescription(type: SSEConnectionType): string {
+    if (type === SSEConnectionType.NEWS) {
+      return `${type} (global news stream)`;
+    }
+    return `${type} for ${this.options.code}`;
+  }
+
+  /**
    * Connect to SSE stream
    */
   async connect(type: SSEConnectionType): Promise<void> {
@@ -38,13 +48,18 @@ export class SSEClient {
     }
 
     try {
-      // Get UT token
-      const utToken = await getUtToken(this.options.code, this.options.market);
+      // Build URL - news type doesn't need token
+      let url: string;
+      if (type === SSEConnectionType.NEWS) {
+        // News SSE doesn't require token or code/market
+        url = SSEUrlBuilder.buildUrl(type, '', 0, '');
+      } else {
+        // Other types need token
+        const utToken = await getUtToken(this.options.code, this.options.market);
+        url = SSEUrlBuilder.buildUrl(type, this.options.code, this.options.market, utToken);
+      }
       
-      // Build URL
-      const url = SSEUrlBuilder.buildUrl(type, this.options.code, this.options.market, utToken);
-      
-      logger.debug(`Connecting to SSE: ${type} for ${this.options.code}`);
+      logger.debug(`Connecting to SSE: ${this.getConnectionDescription(type)}`);
 
       // Create EventSource
       this.eventSource = new EventSource(url, {
@@ -81,7 +96,7 @@ export class SSEClient {
 
       // Handle connection open
       this.eventSource.onopen = () => {
-        logger.info(`SSE connection opened: ${type} for ${this.options.code}`);
+        logger.info(`SSE connection opened: ${this.getConnectionDescription(type)}`);
         this.isConnected = true;
         this.reconnectAttempts = 0;
         this.lastHeartbeat = Date.now();
@@ -89,7 +104,7 @@ export class SSEClient {
 
       // Handle errors
       this.eventSource.onerror = (error) => {
-        logger.warn(`SSE connection error: ${type} for ${this.options.code}`, error);
+        logger.warn(`SSE connection error: ${this.getConnectionDescription(type)}`, error);
         this.isConnected = false;
 
         if (!this.isClosing) {
@@ -155,7 +170,8 @@ export class SSEClient {
     const elapsed = Date.now() - this.lastHeartbeat;
     
     if (elapsed > timeout && this.isConnected) {
-      logger.warn(`Heartbeat timeout for ${this.options.code}, reconnecting...`);
+      const description = this.options.code ? `${this.options.code}` : 'connection';
+      logger.warn(`Heartbeat timeout for ${description}, reconnecting...`);
       this.isConnected = false;
       return false;
     }
@@ -179,7 +195,8 @@ export class SSEClient {
     }
 
     this.isConnected = false;
-    logger.debug(`SSE connection closed for ${this.options.code}`);
+    const description = this.options.code ? `for ${this.options.code}` : '';
+    logger.debug(`SSE connection closed ${description}`);
   }
 
   /**

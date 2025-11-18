@@ -75,6 +75,41 @@ export function outputRaw(data: string, quiet?: boolean): void {
 }
 
 /**
+ * Format and output data based on format type
+ * This is a helper for commands that need to format data before outputting
+ */
+export function formatAndOutputData(
+  data: any,
+  format: OutputFormat,
+  formatters: {
+    json?: (data: any) => string;
+    table?: (data: any) => string;
+    text?: (data: any) => string;
+  },
+  quiet?: boolean
+): void {
+  if (quiet) {
+    return;
+  }
+
+  let output: string;
+  switch (format) {
+    case 'json':
+      output = formatters.json ? formatters.json(data) : JSON.stringify(data, null, 2);
+      break;
+    case 'table':
+      output = formatters.table ? formatters.table(data) : JSON.stringify(data, null, 2);
+      break;
+    case 'text':
+    default:
+      output = formatters.text ? formatters.text(data) : JSON.stringify(data, null, 2);
+      break;
+  }
+
+  process.stdout.write(output + '\n');
+}
+
+/**
  * Format K-line data as table
  */
 function formatKlineTable(data: KlineData[]): string {

@@ -5,10 +5,10 @@ import { getMarketName } from '../../utils/utils.js';
 import { logger } from '../../infra/logger.js';
 import { getWatchlist } from '../../storage/watchlist.js';
 import { formatSSEQuote, formatTrendData, formatDetailData } from '../../utils/sse-formatters.js';
-import { StreamOptions } from '../types.js';
+import { StreamOptions, CommonOptions } from '../types.js';
 import { outputProgress, outputRaw, OutputFormat } from '../output.js';
 import { resolveMarket } from '../market-utils.js';
-import { validateFormat, wrapCommandAction } from '../command-utils.js';
+import { validateFormat, wrapCommandAction, getFormatOptionHelp, applyFormatAndLoggingOptions } from '../command-utils.js';
 
 /**
  * Parse connection types from string
@@ -96,23 +96,35 @@ function createDataHandler(
 
 /**
  * Register stream command
+ * @param parentCommand - Parent command (program or command group) to attach this command to
  */
-export function registerStreamCommand(program: Command, commonOptions: any): void {
-  const streamCommand = program
+export function registerStreamCommand(parentCommand: Command, commonOptions: CommonOptions): void {
+  const streamCommand = parentCommand
     .command('stream')
     .description('Stream real-time stock data using SSE')
     .alias('s');
 
+  // Apply common options (code and market are handled as specific options for stream)
+  // Note: stream uses optional code, not required code
+  
+  // Command-specific options
   streamCommand
-    .option('-c, --code <code>', 'Stock code (e.g., 300427). Required if --watchlist is not used.')
-    .option('-m, --market <market>', 'Market code (0=Shenzhen, 1=Shanghai, 105=US, 116=HK). Auto-detected for A-share codes if not provided.')
+    .option('-c, --code <code>', 'Stock code (e.g., 300427). Required if --watchlist is not used.');
+  
+  // Market option is optional for stream (will auto-detect if not provided)
+  if (commonOptions.marketOptional) {
+    commonOptions.marketOptional(streamCommand);
+  }
+  
+  streamCommand
     .option('-w, --watchlist', 'Stream all stocks in watchlist')
     .option('-t, --types <types>', 'Connection types to subscribe (quote,trend,detail,news). Default: quote', 'quote')
-    .option('-f, --format <format>', 'Output format (json/table/text)', 'table')
+    .option('-f, --format <format>', getFormatOptionHelp('table'), 'table')
     .option('--fields <fields>', 'Fields to display (comma-separated)')
     .option('--interval <interval>', 'Update interval in milliseconds for table format', '1000')
     .option('-o, --output <path>', 'Output file path (for CSV format)');
   
+  // Apply logging options
   commonOptions.logging(streamCommand);
   
   streamCommand.action(wrapCommandAction(async (options: StreamOptions) => {

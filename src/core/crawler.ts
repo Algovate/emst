@@ -23,6 +23,8 @@ import { logger } from '../infra/logger.js';
 import { parseKlineResponseData, parseKlineResponseObject } from './response-parser.js';
 import { SAMPLE_LIMIT, DEFAULT_END_DATE, KLINE_FIELDS, REALTIME_FIELDS, ERROR_MESSAGES } from '../infra/constants.js';
 import { SSEStreamManager } from './sse-stream-manager.js';
+import { FastNewsClient, FastNewsOptions } from './fast-news-client.js';
+import { FastNewsCategory, FastNewsListResponse } from '../infra/types.js';
 
 /**
  * East Money K-line data crawler
@@ -37,6 +39,7 @@ export class EastMoneyCrawler {
   private browserManager: BrowserManager | null = null;
   private readonly config = getConfig();
   private sseStreamManager: SSEStreamManager | null = null;
+  private fastNewsClient: FastNewsClient | null = null;
 
   constructor() {
     this.apiBaseUrl = this.config.api?.baseUrl || 'https://push2his.eastmoney.com/api/qt/stock/kline/get';
@@ -686,6 +689,24 @@ export class EastMoneyCrawler {
       return this.sseStreamManager.getLatestData(code, market, type);
     }
     return null;
+  }
+
+  /**
+   * Get fast news client instance
+   */
+  private getFastNewsClient(): FastNewsClient {
+    if (!this.fastNewsClient) {
+      this.fastNewsClient = new FastNewsClient();
+    }
+    return this.fastNewsClient;
+  }
+
+  /**
+   * Fetch fast news list
+   */
+  async fetchFastNews(options: FastNewsOptions = {}): Promise<FastNewsListResponse> {
+    const client = this.getFastNewsClient();
+    return await client.fetchFastNewsList(options);
   }
 }
 

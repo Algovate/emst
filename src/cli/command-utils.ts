@@ -2,10 +2,19 @@ import { Command } from 'commander';
 import { handleError } from '../utils/utils.js';
 import { applyLoggingOptions } from './index.js';
 import { OutputFormat } from './output.js';
+import { CommonOptions } from './types.js';
+
+/**
+ * Get format option help text with default value
+ */
+export function getFormatOptionHelp(defaultFormat: OutputFormat = 'json'): string {
+  return `Output format: json|table|text (default: "${defaultFormat}")`;
+}
 
 /**
  * Validate output format
  */
+
 export function validateFormat(format: string | undefined, defaultFormat: OutputFormat = 'json'): OutputFormat {
   const validFormats: OutputFormat[] = ['json', 'table', 'text'];
   const finalFormat = (format || defaultFormat) as OutputFormat;
@@ -15,6 +24,53 @@ export function validateFormat(format: string | undefined, defaultFormat: Output
   }
   
   return finalFormat;
+}
+
+/**
+ * Apply common stock command options (code, market, format, logging)
+ * This helper standardizes the option application pattern
+ */
+export function applyStockCommandOptions(
+  command: Command,
+  commonOptions: CommonOptions,
+  formatDefault: OutputFormat = 'table'
+): void {
+  // Apply common options
+  commonOptions.code(command);
+  // Market option is optional (will auto-detect if not provided)
+  if (commonOptions.marketOptional) {
+    commonOptions.marketOptional(command);
+  }
+  
+  // Command-specific format option
+  command.option('-f, --format <format>', getFormatOptionHelp(formatDefault), formatDefault);
+  
+  // Apply logging options
+  commonOptions.logging(command);
+}
+
+/**
+ * Apply format and logging options for commands that don't need code/market
+ */
+export function applyFormatAndLoggingOptions(
+  command: Command,
+  commonOptions: CommonOptions,
+  formatDefault: OutputFormat = 'text'
+): void {
+  command.option('-f, --format <format>', getFormatOptionHelp(formatDefault), formatDefault);
+  commonOptions.logging(command);
+}
+
+/**
+ * Apply logging options conditionally (for commands with optional commonOptions)
+ */
+export function applyLoggingOptionsIfAvailable(
+  command: Command,
+  commonOptions?: CommonOptions
+): void {
+  if (commonOptions) {
+    commonOptions.logging(command);
+  }
 }
 
 /**

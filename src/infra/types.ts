@@ -294,3 +294,52 @@ export interface SSERawResponse {
   data: any;              // Data payload (varies by type)
 }
 
+/**
+ * Fast news category types
+ */
+export enum FastNewsCategory {
+  LIVE_724 = 'live_724',        // 7*24全球直播
+  FOCUS = 'focus',              // 焦点
+  STOCK_LIVE = 'stock_live',    // 股市直播
+  LISTED_COMPANY = 'listed',    // 上市公司
+  REGION = 'region',            // 地区
+  CENTRAL_BANK = 'central_bank', // 全球央行
+  ECONOMIC_DATA = 'economic',   // 经济数据
+  GLOBAL_STOCK = 'global_stock', // 全球股市
+  COMMODITY = 'commodity',      // 商品
+  FOREX = 'forex',              // 外汇
+  BOND = 'bond',                // 债券
+}
+
+/**
+ * Fast news item structure
+ */
+export interface FastNewsItem {
+  id: string;                    // News ID
+  title: string;                 // News title
+  content: string;               // News content
+  time: string;                  // Publish time
+  timestamp?: number;            // Timestamp in milliseconds
+  source?: string;               // News source
+  url?: string;                  // News URL
+  category?: string;             // News category
+  [key: string]: any;            // Additional fields
+}
+
+/**
+ * Fast news list API response
+ */
+export interface FastNewsListResponse {
+  code: number;                  // Response code
+  message?: string;              // Response message
+  data?: {
+    list?: FastNewsItem[];       // News list
+    total?: number;              // Total count
+    page?: number;               // Current page
+    pageSize?: number;           // Page size
+    hasMore?: boolean;           // Has more pages
+    sortEnd?: string;            // Sort end for pagination
+  };
+  [key: string]: any;            // Additional fields
+}
+

@@ -1,3 +1,5 @@
+import { Command } from 'commander';
+
 /**
  * CLI command option types
  */
@@ -48,5 +50,32 @@ export interface StreamOptions {
   output?: string;
   verbose?: boolean;
   quiet?: boolean;
+}
+
+export interface NewsListOptions {
+  category?: string;
+  pageSize?: string;
+  format?: OutputFormat;
+  quiet?: boolean;
+  verbose?: boolean;
+}
+
+export interface NewsStreamOptions {
+  format?: OutputFormat;
+  quiet?: boolean;
+  verbose?: boolean;
+}
+
+/**
+ * Common options builder type
+ */
+export interface CommonOptions {
+  market: (cmd: Command) => Command;
+  marketOptional?: (cmd: Command) => Command;
+  code: (cmd: Command) => Command;
+  timeframe: (cmd: Command) => Command;
+  dateRange: (cmd: Command) => Command;
+  output: (cmd: Command) => Command;
+  logging: (cmd: Command) => Command;
 }
 

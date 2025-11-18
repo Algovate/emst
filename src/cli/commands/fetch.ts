@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { writeFileSync } from 'fs';
 import { join } from 'path';
 import { Market, Timeframe, CrawlerOptions, AdjustmentType } from '../../infra/types.js';
-import { FetchOptions } from '../types.js';
+import { FetchOptions, CommonOptions } from '../types.js';
 import {
   getAdjustmentTypeName,
   validateTimeframe,
@@ -13,7 +13,7 @@ import { fetchWithCache } from '../../utils/fetch-helper.js';
 import { exportToCSV } from '../../utils/export.js';
 import { outputData, outputProgress, OutputFormat } from '../output.js';
 import { resolveMarket } from '../market-utils.js';
-import { validateFormat, wrapCommandAction } from '../command-utils.js';
+import { validateFormat, wrapCommandAction, getFormatOptionHelp, applyStockCommandOptions } from '../command-utils.js';
 
 /**
  * Handle fetch action
@@ -151,26 +151,35 @@ function formatKlineTextForFile(data: any[]): string {
 
 /**
  * Register fetch command
+ * @param parentCommand - Parent command (program or command group) to attach this command to
  */
-export function registerFetchCommand(program: Command, commonOptions: any): void {
-  const fetchCommand = program
+export function registerFetchCommand(parentCommand: Command, commonOptions: CommonOptions): void {
+  const fetchCommand = parentCommand
     .command('fetch')
     .description('Fetch K-line data for a stock')
     .alias('f');
 
-  // Apply common options to fetch command
+  // Apply common options
   commonOptions.code(fetchCommand);
   // Market option is optional for fetch (will auto-detect if not provided)
-  fetchCommand.option('-m, --market <market>', 'Market code (0=Shenzhen, 1=Shanghai, 105=US, 116=HK). Auto-detected for A-share codes if not provided.');
+  if (commonOptions.marketOptional) {
+    commonOptions.marketOptional(fetchCommand);
+  }
   commonOptions.timeframe(fetchCommand);
   commonOptions.dateRange(fetchCommand);
   commonOptions.output(fetchCommand);
-  commonOptions.logging(fetchCommand);
-
+  
+  // Command-specific options
   fetchCommand
     .option('-l, --limit <number>', 'Maximum records to fetch', '1000000')
     .option('--fqt <0|1|2>', 'Price adjustment type: 0=none, 1=forward, 2=backward (default: 1)')
     .option('--no-cache', 'Bypass cache and fetch fresh data')
-    .action(wrapCommandAction(handleFetchAction));
+    .option('-f, --format <format>', getFormatOptionHelp('json'), 'json');
+  
+  // Apply logging options
+  commonOptions.logging(fetchCommand);
+  
+  // Define action
+  fetchCommand.action(wrapCommandAction(handleFetchAction));
 }
 

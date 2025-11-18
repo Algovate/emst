@@ -14,16 +14,28 @@
 export function suppressKnownDeprecationWarnings(): void {
   // Intercept process.emitWarning to filter out specific deprecation warnings
   const originalEmitWarning = process.emitWarning;
-  process.emitWarning = (warning: string | Error, type?: string, code?: string, ...args: any[]) => {
-    if (shouldSuppressWarning(warning, code)) {
+  // Use type assertion to handle the complex overloaded signature
+  process.emitWarning = ((warning: string | Error, ...args: any[]) => {
+    // Extract code from different call signatures
+    let warningCode: string | undefined;
+    
+    // Check if second argument is an options object
+    if (args.length > 0 && args[0] && typeof args[0] === 'object' && 'code' in args[0]) {
+      warningCode = args[0].code;
+    } else if (args.length > 1 && typeof args[1] === 'string') {
+      // Second argument is code (when first is type string)
+      warningCode = args[1];
+    }
+
+    if (shouldSuppressWarning(warning, warningCode)) {
       return; // Suppress this warning
     }
-    // Forward all other warnings
-    return originalEmitWarning.call(process, warning, type, code, ...args);
-  };
+    // Forward all other warnings using original function
+    return (originalEmitWarning as any).apply(process, [warning, ...args]);
+  }) as typeof process.emitWarning;
 
   // Also handle warning events as a fallback
-  process.on('warning', (warning) => {
+  process.on('warning', (warning: Error & { code?: string }) => {
     if (shouldSuppressWarning(warning, warning.code)) {
       return; // Suppress this warning
     }

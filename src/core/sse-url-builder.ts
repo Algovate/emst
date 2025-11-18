@@ -8,6 +8,7 @@ import { getRandomServer, generateCnameHash } from '../utils/sse-utils.js';
 export class SSEUrlBuilder {
   /**
    * Build SSE URL based on connection type
+   * For NEWS type, code, market, and utToken are ignored
    */
   static buildUrl(
     type: SSEConnectionType,
@@ -15,18 +16,26 @@ export class SSEUrlBuilder {
     market: Market,
     utToken: string
   ): string {
-    const secid = buildSecid(market, code);
     const server = getRandomServer();
 
     switch (type) {
-      case SSEConnectionType.QUOTE:
-        return this.buildQuoteUrl(server, secid, utToken);
-      case SSEConnectionType.TREND:
-        return this.buildTrendUrl(server, secid, utToken);
-      case SSEConnectionType.DETAIL:
-        return this.buildDetailUrl(server, secid, utToken);
       case SSEConnectionType.NEWS:
+        // News SSE is global and doesn't need code/market/token
         return this.buildNewsUrl(server);
+      case SSEConnectionType.QUOTE:
+      case SSEConnectionType.TREND:
+      case SSEConnectionType.DETAIL:
+        // Stock-specific streams need secid and token
+        const secid = buildSecid(market, code);
+        switch (type) {
+          case SSEConnectionType.QUOTE:
+            return this.buildQuoteUrl(server, secid, utToken);
+          case SSEConnectionType.TREND:
+            return this.buildTrendUrl(server, secid, utToken);
+          case SSEConnectionType.DETAIL:
+            return this.buildDetailUrl(server, secid, utToken);
+        }
+        break;
       default:
         throw new Error(`Unsupported SSE connection type: ${type}`);
     }

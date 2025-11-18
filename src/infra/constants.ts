@@ -37,3 +37,31 @@ export const ERROR_MESSAGES = {
   FAILED_TO_GET_RESPONSE: 'Failed to get response from API',
 } as const;
 
+/**
+ * Fast news category to fastColumn ID mapping
+ * Based on analysis of https://kuaixun.eastmoney.com/
+ */
+export const FAST_NEWS_CATEGORY_MAP: Record<string, number> = {
+  live_724: 108,        // 7*24全球直播 (default on zq.html)
+  focus: 101,           // 焦点 (yw.html)
+  stock_live: 102,      // 股市直播 (zhibo.html) - estimated
+  listed: 103,          // 上市公司 (ssgs.html) - estimated
+  region: 104,          // 地区 (dq.html) - estimated
+  central_bank: 105,    // 全球央行 (qqyh.html) - estimated
+  economic: 106,        // 经济数据 (jjsj.html) - estimated
+  global_stock: 107,    // 全球股市 (qqgs.html) - estimated
+  commodity: 109,       // 商品 (sp.html) - estimated
+  forex: 110,           // 外汇 (wh.html) - estimated
+  bond: 108,            // 债券 (zq.html)
+} as const;
+
+/**
+ * Fast news API constants
+ */
+export const FAST_NEWS_API = {
+  BASE_URL: 'https://np-weblist.eastmoney.com/comm/web/getFastNewsList',
+  DEFAULT_PAGE_SIZE: 50,
+  DEFAULT_BIZ: 'web_724',
+  DEFAULT_CLIENT: 'web',
+} as const;
+

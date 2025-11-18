@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { CommonOptions } from '../types.js';
 import { Market, Timeframe, SyncResult, AdjustmentType } from '../../infra/types.js';
 import { SyncOptions } from '../types.js';
 import {
@@ -19,13 +20,14 @@ import { syncWatchlist } from '../../storage/sync.js';
 import { logger } from '../../infra/logger.js';
 import { outputProgress, outputData, outputRaw, OutputFormat } from '../output.js';
 import { resolveMarket } from '../market-utils.js';
-import { validateFormat, wrapCommandAction } from '../command-utils.js';
+import { validateFormat, wrapCommandAction, getFormatOptionHelp, applyFormatAndLoggingOptions, applyLoggingOptionsIfAvailable } from '../command-utils.js';
 
 /**
  * Register watchlist command group
+ * @param parentCommand - Parent command (program or command group) to attach this command to
  */
-export function registerWatchlistCommands(program: Command, commonOptions?: any): void {
-  const watchlistCommand = program
+export function registerWatchlistCommands(parentCommand: Command, commonOptions?: CommonOptions): void {
+  const watchlistCommand = parentCommand
     .command('watchlist')
     .description('Manage watchlist of stock symbols')
     .alias('wl');
@@ -38,9 +40,8 @@ export function registerWatchlistCommands(program: Command, commonOptions?: any)
     .argument('<code>', 'Stock code (e.g., 688005 for A-share, 00700 for HK, AAPL for US)')
     .option('-m, --market <market>', getMarketHelpText() + ' (optional for A-share codes)');
   
-  if (commonOptions) {
-    commonOptions.logging(addCommand);
-  }
+  // Apply logging options
+  applyLoggingOptionsIfAvailable(addCommand, commonOptions);
   
   addCommand.action(wrapCommandAction((code: string, options: { market?: string; verbose?: boolean; quiet?: boolean }) => {
       // Resolve market (auto-detect or validate provided, require market for watchlist add)
@@ -62,9 +63,8 @@ export function registerWatchlistCommands(program: Command, commonOptions?: any)
     .alias('rm')
     .argument('<code>', 'Stock code (e.g., 688005)');
   
-  if (commonOptions) {
-    commonOptions.logging(removeCommand);
-  }
+  // Apply logging options
+  applyLoggingOptionsIfAvailable(removeCommand, commonOptions);
   
   removeCommand.action(wrapCommandAction((code: string, options: { verbose?: boolean; quiet?: boolean }) => {
       const removed = removeFromWatchlist(code);
@@ -82,13 +82,9 @@ export function registerWatchlistCommands(program: Command, commonOptions?: any)
     .alias('ls')
     .option('-i, --info', 'Show detailed information including cache statistics');
   
+  // Apply format and logging options
   if (commonOptions) {
-    commonOptions.logging(listCommand);
-  }
-  
-  // Add format option to list command
-  if (commonOptions) {
-    listCommand.option('-f, --format <format>', 'Output format (json/table/text)', 'text');
+    applyFormatAndLoggingOptions(listCommand, commonOptions, 'text');
   }
   
   listCommand.action(wrapCommandAction((options: { info?: boolean; format?: string; verbose?: boolean; quiet?: boolean }) => {
@@ -187,13 +183,12 @@ export function registerWatchlistCommands(program: Command, commonOptions?: any)
     .description('Check and validate market codes for all symbols in the watchlist')
     .alias('c');
   
+  // Apply format and logging options
   if (commonOptions) {
-    commonOptions.logging(checkCommand);
-  }
-  
-  // Add format option to check command
-  if (commonOptions) {
-    checkCommand.option('-f, --format <format>', 'Output format (json/table/text)', 'text');
+    applyFormatAndLoggingOptions(checkCommand, commonOptions, 'text');
+  } else {
+    // If no commonOptions, at least add format option manually
+    checkCommand.option('-f, --format <format>', getFormatOptionHelp('text'), 'text');
   }
   
   checkCommand.action(wrapCommandAction((options: { format?: string; verbose?: boolean; quiet?: boolean }) => {
@@ -276,9 +271,8 @@ export function registerWatchlistCommands(program: Command, commonOptions?: any)
     .option('-e, --end <date>', 'End date (YYYYMMDD)')
     .option('--force', 'Force refresh even if cache is valid');
   
-  if (commonOptions) {
-    commonOptions.logging(syncCommand);
-  }
+  // Apply logging options
+  applyLoggingOptionsIfAvailable(syncCommand, commonOptions);
   
   syncCommand.action(wrapCommandAction(async (options: SyncOptions) => {
       // Validate timeframe if provided
