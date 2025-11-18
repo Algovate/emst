@@ -42,20 +42,23 @@ export function parseSSEQuoteData(
 
   const data = rawResponse.data;
   
+  // Helper to check if a field exists in raw data
+  const hasField = (field: string): boolean => field in data && data[field] !== undefined && data[field] !== null;
+  
   // Convert price from "分" (cents) to "元" (yuan)
   const latestPrice = (data.f43 ?? data.f60 ?? data.f301 ?? 0) / 100;
   const open = (data.f44 ?? 0) / 100;
   const previousClose = (data.f45 ?? 0) / 100;
   const high = (data.f46 ?? 0) / 100;
-  const buy1Price = (data.f51 ?? 0) / 100;
-  const sell1Price = (data.f52 ?? 0) / 100;
+  const buy1Price = hasField('f51') ? (data.f51 ?? 0) / 100 : undefined;
+  const sell1Price = hasField('f52') ? (data.f52 ?? 0) / 100 : undefined;
 
-  const changeAmount = latestPrice - previousClose;
-  const changePercent = previousClose !== 0 ? (changeAmount / previousClose) * 100 : 0;
+  const changeAmount = previousClose !== 0 ? latestPrice - previousClose : undefined;
+  const changePercent = previousClose !== 0 ? (changeAmount! / previousClose) * 100 : undefined;
 
   const quote: SSEQuoteData = {
     code: data.f57 ?? code,
-    name: data.f58 ?? '',
+    name: hasField('f58') ? (data.f58 ?? '') : '',
     market: data.f107 ?? market,
     latestPrice,
     open,
@@ -64,26 +67,26 @@ export function parseSSEQuoteData(
     low: high, // API doesn't provide separate low in real-time quote
     volume: data.f47 ?? 0,
     amount: data.f48 ?? 0,
-    changeAmount: previousClose !== 0 ? changeAmount : undefined,
-    changePercent: previousClose !== 0 ? changePercent : undefined,
+    changeAmount,
+    changePercent,
     totalMarketValue: data.f84 ?? data.f116,
     circulatingMarketValue: data.f85 ?? data.f117,
     timestamp: data.f86 ? data.f86 * 1000 : Date.now(), // Convert Unix timestamp to milliseconds
     svr: rawResponse.svr,
-    rawData: data,
+    rawData: data, // Preserve raw data so merge function can check which fields were provided
     buy1Price,
     sell1Price,
-    buy1Volume: data.f161,
-    buy2Volume: data.f162,
-    buy3Volume: data.f163,
-    buy4Volume: data.f164,
-    sell1Volume: data.f167,
-    sell2Volume: data.f168,
-    sell3Volume: data.f169,
-    sell4Volume: data.f170,
-    volumeRatio: data.f92,
-    turnoverRate: data.f107,
-    peRatio: data.f111,
+    buy1Volume: hasField('f161') ? data.f161 : undefined,
+    buy2Volume: hasField('f162') ? data.f162 : undefined,
+    buy3Volume: hasField('f163') ? data.f163 : undefined,
+    buy4Volume: hasField('f164') ? data.f164 : undefined,
+    sell1Volume: hasField('f167') ? data.f167 : undefined,
+    sell2Volume: hasField('f168') ? data.f168 : undefined,
+    sell3Volume: hasField('f169') ? data.f169 : undefined,
+    sell4Volume: hasField('f170') ? data.f170 : undefined,
+    volumeRatio: hasField('f92') ? data.f92 : undefined,
+    turnoverRate: hasField('f107') ? data.f107 : undefined,
+    peRatio: hasField('f111') ? data.f111 : undefined,
   };
 
   return quote;

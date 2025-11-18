@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+// Initialize process-level setup (must be done before other imports)
+import { suppressKnownDeprecationWarnings } from '../utils/process-setup.js';
+suppressKnownDeprecationWarnings();
+
 import { Command } from 'commander';
 import { getMarketHelpText } from '../utils/utils.js';
 import { registerQuoteCommand } from './commands/quote.js';

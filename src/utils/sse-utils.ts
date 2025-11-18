@@ -3,6 +3,7 @@ import BrowserManager from '../core/browser-manager.js';
 import { Market } from '../infra/types.js';
 import { logger } from '../infra/logger.js';
 import { SSE_CONSTANTS } from '../infra/sse-constants.js';
+import { getConfig } from '../infra/config.js';
 
 /**
  * Get UT token from East Money page
@@ -12,6 +13,8 @@ export async function getUtToken(code: string, market: Market): Promise<string> 
   const browserManager = BrowserManager.getInstance();
   const browser = await browserManager.getBrowser();
   const page = await browser.newPage();
+  const config = getConfig();
+  let navigationSucceeded = false;
 
   try {
     // Build referer URL
@@ -26,14 +29,38 @@ export async function getUtToken(code: string, market: Market): Promise<string> 
 
     logger.debug(`Fetching UT token from ${refererUrl}`);
 
-    await page.goto(refererUrl, {
-      waitUntil: 'networkidle2',
-      timeout: 30000,
-    });
+    // Use configurable timeout, default to 60 seconds (same as crawler's refererTimeoutMs)
+    const refererTimeout = config.browser?.refererTimeoutMs || 60000;
+    
+    // Set page default navigation timeout to override Puppeteer's 30s default
+    page.setDefaultNavigationTimeout(refererTimeout);
+    
+    try {
+      await page.goto(refererUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: refererTimeout,
+      });
+      navigationSucceeded = true;
+    } catch (error) {
+      // Navigation may have timed out, but page might still have loaded enough content
+      // We'll still try to extract the token from whatever content is available
+      logger.debug(`Navigation timeout or error, but attempting token extraction anyway: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Wait for scripts to execute and set window variables
+    // This allows time for the page's JavaScript to initialize tokens
+    // Use shorter wait if navigation failed (page might not be fully loaded)
+    const refererWait = navigationSucceeded 
+      ? (config.browser?.refererWaitMs || 2000)
+      : 1000; // Shorter wait if navigation failed
+    await new Promise(resolve => setTimeout(resolve, refererWait));
 
       // Try to extract UT token from page
       // The token is often in window variables or can be extracted from network requests
-      const utToken = await page.evaluate(() => {
+      // This will work even if navigation timed out, as long as some content loaded
+      // Pass default token as parameter since SSE_CONSTANTS is not available in browser context
+      const defaultToken = SSE_CONSTANTS.DEFAULT_UT_TOKEN;
+      const utToken = await page.evaluate((defaultUtToken: string) => {
         // @ts-ignore - window and document are available in browser context
         const win = window as any;
         
@@ -60,19 +87,34 @@ export async function getUtToken(code: string, market: Market): Promise<string> 
         }
         
         // Default token (commonly used)
-        return SSE_CONSTANTS.DEFAULT_UT_TOKEN;
-      });
+        return defaultUtToken;
+      }, defaultToken);
 
     if (utToken && utToken.length > 10) {
       logger.debug(`UT token extracted: ${utToken.substring(0, 10)}...`);
+      // If navigation failed but we still got the token, log at debug level instead of warning
+      if (!navigationSucceeded) {
+        logger.debug('Token extracted despite navigation timeout');
+      }
       return utToken;
     }
 
     // Fallback to default token
-    logger.warn('Could not extract UT token from page, using default');
+    if (navigationSucceeded) {
+      logger.warn('Could not extract UT token from page, using default');
+    } else {
+      // Navigation failed, so it's expected we might not get the token
+      logger.debug('Could not extract UT token from page (navigation failed), using default');
+    }
     return SSE_CONSTANTS.DEFAULT_UT_TOKEN;
   } catch (error) {
-    logger.warn('Failed to fetch UT token from page, using default:', error instanceof Error ? error.message : String(error));
+    // Only log warning if navigation succeeded but extraction failed
+    // If navigation already failed, we've already handled it above
+    if (navigationSucceeded) {
+      logger.warn('Failed to extract UT token from page, using default:', error instanceof Error ? error.message : String(error));
+    } else {
+      logger.debug('Failed to extract UT token from page (navigation failed), using default:', error instanceof Error ? error.message : String(error));
+    }
     // Return default token as fallback
     return SSE_CONSTANTS.DEFAULT_UT_TOKEN;
   } finally {
