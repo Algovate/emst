@@ -1,74 +1,78 @@
 # 使用示例
 
-本文档提供了在各种场景下使用 emst 的实用示例。
+本文档提供 emst 的详细使用方法和各种场景下的实用示例。
 
-> **注意**: 如果通过 `npm install -g emst` 全局安装，可以直接使用 `emst` 命令。如果从源码运行，请使用 `npm run start --`。
+## 目录
+
+- [基本数据获取](#基本数据获取) - K线数据获取、时间周期、格式导出等
+- [实时行情](#实时行情) - 实时行情快照和 SSE 实时数据流
+- [新闻功能](#新闻功能) - 快讯列表获取和实时新闻流
+- [自选股工作流](#自选股工作流) - 自选股管理和批量同步
+- [缓存管理](#缓存管理) - 缓存使用和验证
+- [高级场景](#高级场景) - 批量处理、多时间周期、多市场等
+- [脚本示例](#脚本示例) - Shell、Python、Node.js 脚本示例
+- [集成示例](#集成示例) - Cron、GitHub Actions、systemd 等集成
+- [常见使用场景](#常见使用场景) - 实际应用场景示例
+
+> **提示**：全局安装后使用 `emst` 命令。源码运行使用 `npm run start --`。
 
 ## 基本数据获取
 
 ### 获取日线数据
 
 ```bash
-# 获取最新日线数据（默认输出为 JSON 格式到 stdout）
+# 基本用法：获取最新日线数据（默认 JSON 格式输出到终端）
 emst stock fetch --code 688005
 
-# 或使用简写形式
-emst stock f --code 688005
-
-# 获取并保存到文件
+# 保存到文件
 emst stock fetch --code 688005 --output daily.json
 
-# 指定日期范围获取
+# 指定日期范围
 emst stock fetch --code 688005 --start 20240101 --end 20241231 --output 2024.json
 
-# 使用表格格式输出
-emst stock fetch --code 688005 --format table
+# 不同输出格式
+emst stock fetch --code 688005 --format table  # 表格格式
+emst stock fetch --code 688005 --format text   # 文本格式
 
-# 使用文本格式输出
-emst stock fetch --code 688005 --format text
-
-# 静默模式（仅输出数据，不显示进度信息）
-emst stock fetch --code 688005 --quiet
-
-# 详细模式（显示调试信息）
-emst stock fetch --code 688005 --verbose
+# 高级选项
+emst stock fetch --code 688005 --quiet    # 静默模式（仅输出数据）
+emst stock fetch --code 688005 --verbose  # 详细模式（显示调试信息）
 ```
 
-### 获取不同时间周期
+### 时间周期
+
+支持日线、周线、月线及日内数据（5分钟/15分钟/30分钟/60分钟）：
 
 ```bash
+# 日线数据（默认）
+emst stock fetch --code 688005 --timeframe daily
+
 # 周线数据
-emst stock fetch --code 688005 --timeframe weekly --output weekly.json
+emst stock fetch --code 688005 --timeframe weekly
 
 # 月线数据
-emst stock fetch --code 688005 --timeframe monthly --output monthly.json
+emst stock fetch --code 688005 --timeframe monthly
 
-# 5分钟日内数据
-emst stock fetch --code 688005 --timeframe 5min --output 5min.json
-
-# 15分钟日内数据
-emst stock fetch --code 688005 --timeframe 15min --output 15min.json
-
-# 30分钟日内数据
-emst stock fetch --code 688005 --timeframe 30min --output 30min.json
-
-# 60分钟日内数据
-emst stock fetch --code 688005 --timeframe 60min --output 60min.json
+# 日内数据
+emst stock fetch --code 688005 --timeframe 5min
+emst stock fetch --code 688005 --timeframe 15min
+emst stock fetch --code 688005 --timeframe 30min
+emst stock fetch --code 688005 --timeframe 60min
 ```
 
 ### 导出格式
 
 ```bash
-# JSON格式（默认）
+# JSON 格式（默认）
 emst stock fetch --code 688005 --output data.json --format json
 
-# 表格格式
+# 表格格式（适合终端查看）
 emst stock fetch --code 688005 --format table
 
 # 文本格式
 emst stock fetch --code 688005 --format text
 
-# CSV格式（通过文件扩展名自动识别）
+# CSV 格式（通过文件扩展名自动识别）
 emst stock fetch --code 688005 --output data.csv
 ```
 
@@ -76,69 +80,35 @@ emst stock fetch --code 688005 --output data.csv
 
 ```bash
 # 不复权
-emst stock fetch --code 688005 --fqt 0 --output none.json
+emst stock fetch --code 688005 --fqt 0
 
 # 前复权（默认）
-emst stock fetch --code 688005 --fqt 1 --output forward.json
-# 或
-emst stock fetch --code 688005 --output forward.json
+emst stock fetch --code 688005 --fqt 1
+# 或省略参数
+emst stock fetch --code 688005
 
 # 后复权
-emst stock fetch --code 688005 --fqt 2 --output backward.json
+emst stock fetch --code 688005 --fqt 2
 ```
 
 ### 多市场支持
 
+支持 A股、港股、美股三大市场，A股自动识别市场：
+
 ```bash
-# A股（自动检测市场，无需指定）
-emst stock fetch --code 688005              # 上海（自动检测）
-emst stock fetch --code 000001              # 深圳（自动检测）
+# A股（自动检测市场）
+emst stock fetch --code 688005  # 上海（自动检测）
+emst stock fetch --code 000001  # 深圳（自动检测）
 
-# 显式指定A股市场
-emst stock fetch --code 600000 --market 1   # 上海
-emst stock fetch --code 000001 --market 0   # 深圳
+# 显式指定 A股市场
+emst stock fetch --code 600000 --market 1  # 上海
+emst stock fetch --code 000001 --market 0  # 深圳
 
-# 港股（需要指定市场）
+# 港股（需指定市场）
 emst stock fetch --code 00700 --market 116
 
-# 美股（需要指定市场）
+# 美股（需指定市场）
 emst stock fetch --code AAPL --market 105
-```
-
-## 新闻功能
-
-### 获取快讯列表
-
-```bash
-# 获取快讯列表（默认文本格式）
-emst news list
-
-# 指定分类
-emst news list --category live_724  # 7x24小时快讯
-emst news list --category focus     # 焦点新闻
-emst news list --category bond      # 债券新闻
-
-# 指定数量
-emst news list --page-size 100
-
-# JSON格式输出
-emst news list --format json
-
-# 表格格式输出
-emst news list --format table
-```
-
-### 实时新闻流
-
-```bash
-# 实时新闻流（SSE）
-emst news stream
-
-# JSON格式输出
-emst news stream --format json
-
-# 文本格式输出（默认）
-emst news stream --format text
 ```
 
 ## 实时行情
@@ -146,23 +116,20 @@ emst news stream --format text
 ### 获取实时行情快照
 
 ```bash
-# 获取实时行情（表格格式，默认）
+# 获取实时行情（默认表格格式）
 emst stock quote --code 688005
 
-# JSON格式输出
+# JSON 格式输出
 emst stock quote --code 688005 --format json
 
-# 文本格式输出
-emst stock quote --code 688005 --format text
-
-# 港股实时行情
-emst stock quote --code 00700 --market 116
-
-# 美股实时行情
-emst stock quote --code AAPL --market 105
+# 多市场支持
+emst stock quote --code 00700 --market 116  # 港股
+emst stock quote --code AAPL --market 105   # 美股
 ```
 
 ### 实时数据流（SSE）
+
+支持实时推送行情、分时走势、成交明细等：
 
 ```bash
 # 监控单个股票的实时行情
@@ -171,21 +138,45 @@ emst stock stream --code 688005
 # 订阅多种数据类型
 emst stock stream --code 688005 --types quote,trend,detail
 
-# JSON格式输出
-emst stock stream --code 688005 --format json
-
-# 文本格式输出
-emst stock stream --code 688005 --format text
-
 # 监控自选股列表
 emst stock stream --watchlist
 
-# 监控自选股并订阅所有类型
-emst stock stream --watchlist --types quote,trend,detail,news
-
-# 设置更新间隔（毫秒）
-emst stock stream --code 688005 --interval 2000
+# 输出格式
+emst stock stream --code 688005 --format json  # JSON 格式
+emst stock stream --code 688005 --format text  # 文本格式
 ```
+
+## 新闻功能
+
+### 获取快讯列表
+
+```bash
+# 获取最新快讯（默认文本格式）
+emst news list
+
+# 指定分类
+emst news list --category live_724  # 7x24 小时快讯
+emst news list --category focus     # 焦点新闻
+emst news list --category bond      # 债券新闻
+
+# 指定数量
+emst news list --page-size 100
+
+# 输出格式
+emst news list --format json   # JSON 格式
+emst news list --format table  # 表格格式
+```
+
+### 实时新闻流（SSE）
+
+```bash
+# 实时新闻流（默认文本格式）
+emst news stream
+
+# JSON 格式输出
+emst news stream --format json
+```
+
 
 ## 自选股工作流
 

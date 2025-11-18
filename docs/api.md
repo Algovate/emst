@@ -1,6 +1,6 @@
 # API 参考
 
-emst 提供了用于获取股票数据、管理自选股和处理缓存的编程式API。
+emst 提供完整的编程式 API，用于获取股票数据、管理自选股和处理缓存。
 
 ## 安装
 
@@ -9,7 +9,7 @@ npm install
 npm run build
 ```
 
-## 基本使用
+## 快速开始
 
 ### 导入模块
 
@@ -25,7 +25,7 @@ import { syncWatchlist } from './storage/sync.js';
 
 ### EastMoneyCrawler
 
-用于获取K线数据的主类。
+用于获取 K线数据、实时行情和快讯新闻的主类。
 
 ```typescript
 const crawler = new EastMoneyCrawler();
@@ -33,7 +33,7 @@ const crawler = new EastMoneyCrawler();
 
 #### fetchKlineData(options: CrawlerOptions): Promise<KlineData[]>
 
-获取股票的K线数据。
+获取股票的 K线数据。
 
 ```typescript
 const data = await crawler.fetchKlineData({
@@ -43,13 +43,13 @@ const data = await crawler.fetchKlineData({
   startDate: '20240101',
   endDate: '20241231',
   limit: 1000000,
-  fqt: 1 // 0=none, 1=forward, 2=backward
+  fqt: 1  // 0=不复权, 1=前复权, 2=后复权（默认：1）
 });
 ```
 
 #### getStockInfo(code: string, market: Market): Promise<StockInfo>
 
-获取股票信息（名称、市场等）。
+获取股票基本信息（名称、市场等）。
 
 ```typescript
 const info = await crawler.getStockInfo('688005', Market.Shanghai);
@@ -295,7 +295,9 @@ try {
 
 ## 实时行情 API
 
-`getRealtimeQuote()` 方法获取股票的实时市场数据：
+#### getRealtimeQuote(code: string, market: Market): Promise<RealtimeQuote>
+
+获取股票的实时行情快照。
 
 ```typescript
 const crawler = new EastMoneyCrawler();
@@ -304,7 +306,9 @@ const quote = await crawler.getRealtimeQuote('688005', Market.Shanghai);
 
 ## 快讯新闻 API
 
-`fetchFastNews()` 方法获取财经快讯列表：
+#### fetchFastNews(options?: FastNewsOptions): Promise<FastNewsListResponse>
+
+获取财经快讯列表。
 
 ```typescript
 const crawler = new EastMoneyCrawler();
@@ -314,7 +318,7 @@ const news = await crawler.fetchFastNews();
 
 // 指定分类和数量
 const news = await crawler.fetchFastNews({
-  category: 'live_724',  // 7x24小时快讯
+  category: 'live_724',  // 7x24 小时快讯
   pageSize: 100
 });
 ```
@@ -356,13 +360,13 @@ interface FastNewsItem {
 
 ### FastNewsCategory
 
-支持的新闻分类枚举：
+支持的新闻分类：
 
 ```typescript
 enum FastNewsCategory {
-  LIVE_724 = 'live_724',    // 7x24小时快讯
-  FOCUS = 'focus',          // 焦点新闻
-  BOND = 'bond',            // 债券新闻
+  LIVE_724 = 'live_724',  // 7x24 小时快讯
+  FOCUS = 'focus',        // 焦点新闻
+  BOND = 'bond',          // 债券新闻
   // ... 更多分类
 }
 ```
