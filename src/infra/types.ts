@@ -64,7 +64,7 @@ export enum Market {
  * Crawler configuration options
  */
 export interface CrawlerOptions {
-  code: string; // Stock code (e.g., "688005")
+  symbol: string; // Stock symbol (e.g., "688005")
   market?: Market; // Market code (default: Shanghai)
   timeframe?: Timeframe; // K-line timeframe (default: daily)
   startDate?: string; // Start date in YYYYMMDD format
@@ -90,7 +90,7 @@ export const TIMEFRAME_MAP: Record<Timeframe, number> = {
  * Watchlist entry
  */
 export interface WatchlistEntry {
-  code: string; // Stock code (e.g., "688005")
+  symbol: string; // Stock symbol (e.g., "688005")
   market: Market; // Market code
   name?: string; // Stock name (optional, can be fetched)
   addedDate?: string; // Date when added to watchlist (YYYY-MM-DD)
@@ -146,7 +146,7 @@ export interface SyncResult {
  * Real-time quote data
  */
 export interface RealtimeQuote {
-  code: string; // Stock code
+  symbol: string; // Stock symbol
   name: string; // Stock name
   market: number; // Market code
   latestPrice: number; // 最新价 (f43)
@@ -161,6 +161,17 @@ export interface RealtimeQuote {
   totalMarketValue?: number; // 总市值 (f137)
   circulatingMarketValue?: number; // 流通市值 (f170)
   timestamp?: number; // Timestamp when data was fetched
+}
+
+/**
+ * Market detection result
+ */
+export interface MarketDetectionResult {
+  market: number;
+  marketName: string;
+  symbol: string;
+  name: string;
+  works: boolean;
 }
 
 /**
@@ -263,7 +274,7 @@ export interface SSENewsData {
  * SSE stream options
  */
 export interface SSEStreamOptions {
-  code: string;
+  symbol: string;
   market: Market;
   types?: SSEConnectionType[];  // 订阅的连接类型，默认只订阅quote
   reconnectInterval?: number;   // 重连间隔（毫秒），默认5000

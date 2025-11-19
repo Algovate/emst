@@ -1,5 +1,4 @@
-import { KlineData, RealtimeQuote, Timeframe } from '../infra/types.js';
-import { Market } from '../infra/types.js';
+import { KlineData, RealtimeQuote, Timeframe, MarketDetectionResult, Market } from '../infra/types.js';
 import { logger } from '../infra/logger.js';
 
 /**
@@ -66,15 +65,15 @@ export function parseJSONPResponse(jsonp: string): any {
 }
 
 /**
- * Build secid from market and stock code
- * Format: {market}.{code}
+ * Build secid from market and stock symbol
+ * Format: {market}.{symbol}
  */
-export function buildSecid(market: number, code: string): string {
-  return `${market}.${code}`;
+export function buildSecid(market: number, symbol: string): string {
+  return `${market}.${symbol}`;
 }
 
 /**
- * Auto-detect market code from A-share stock code
+ * Auto-detect market code from A-share stock symbol
  * Rules:
  * - 300xxx, 301xxx: 创业板 (Shenzhen)
  * - 000xxx, 001xxx, 002xxx, 003xxx: 深圳主板/中小板 (Shenzhen)
@@ -82,12 +81,12 @@ export function buildSecid(market: number, code: string): string {
  * - 600xxx, 601xxx, 603xxx, 605xxx: 上海主板 (Shanghai)
  * @returns Market code or null if cannot determine
  */
-export function detectMarketFromCode(code: string): Market | null {
-  if (!/^\d{6}$/.test(code)) {
-    return null; // Not a 6-digit A-share code
+export function detectMarketFromSymbol(symbol: string): Market | null {
+  if (!/^\d{6}$/.test(symbol)) {
+    return null; // Not a 6-digit A-share symbol
   }
 
-  const prefix = code.substring(0, 3);
+  const prefix = symbol.substring(0, 3);
   
   // Shenzhen markets
   if (prefix === '300' || prefix === '301') {
@@ -109,21 +108,21 @@ export function detectMarketFromCode(code: string): Market | null {
 }
 
 /**
- * Validate stock code format based on market
+ * Validate stock symbol format based on market
  */
-export function validateStockCode(code: string, market: Market): boolean {
+export function validateStockSymbol(symbol: string, market: Market): boolean {
   switch (market) {
     case Market.Shenzhen:
     case Market.Shanghai:
       // A股: 6 digits
-      return /^\d{6}$/.test(code);
+      return /^\d{6}$/.test(symbol);
     case Market.HongKong:
       // 港股: 5 digits, usually starts with 0
-      return /^0\d{4}$/.test(code);
+      return /^0\d{4}$/.test(symbol);
     case Market.US:
     case Market.US_ETF:
       // 美股/美股ETF: 1-5 uppercase letters (ticker symbol)
-      return /^[A-Z]{1,5}$/.test(code);
+      return /^[A-Z]{1,5}$/.test(symbol);
     default:
       return false;
   }
@@ -174,21 +173,21 @@ export function parseMarket(marketStr: string): Market | null {
 }
 
 /**
- * Get stock code validation error message
+ * Get stock symbol validation error message
  */
-export function getStockCodeValidationError(code: string, market: Market): string {
-  let errorMsg = 'Invalid stock code format. ';
+export function getStockSymbolValidationError(symbol: string, market: Market): string {
+  let errorMsg = 'Invalid stock symbol format. ';
   switch (market) {
     case Market.Shenzhen:
     case Market.Shanghai:
-      errorMsg += 'A-share codes must be 6 digits (e.g., 688005)';
+      errorMsg += 'A-share symbols must be 6 digits (e.g., 688005)';
       break;
     case Market.HongKong:
-      errorMsg += 'Hong Kong codes must be 5 digits starting with 0 (e.g., 00700)';
+      errorMsg += 'Hong Kong symbols must be 5 digits starting with 0 (e.g., 00700)';
       break;
     case Market.US:
     case Market.US_ETF:
-      errorMsg += 'US codes must be 1-5 uppercase letters (e.g., AAPL, SPY)';
+      errorMsg += 'US symbols must be 1-5 uppercase letters (e.g., AAPL, SPY)';
       break;
     default:
       errorMsg += 'Invalid market';
@@ -197,10 +196,10 @@ export function getStockCodeValidationError(code: string, market: Market): strin
 }
 
 /**
- * Validate market and stock code, throw error if invalid
- * If market is not provided or invalid, try to auto-detect from code
+ * Validate market and stock symbol, throw error if invalid
+ * If market is not provided or invalid, try to auto-detect from symbol
  */
-export function validateMarketAndCode(code: string, marketStr?: string): Market {
+export function validateMarketAndSymbol(symbol: string, marketStr?: string): Market {
   let market: Market | null = null;
   
   // Try to parse provided market
@@ -208,13 +207,13 @@ export function validateMarketAndCode(code: string, marketStr?: string): Market 
     market = parseMarket(marketStr);
   }
   
-  // If market not provided or invalid, try to auto-detect from code
+  // If market not provided or invalid, try to auto-detect from symbol
   if (!market) {
-    market = detectMarketFromCode(code);
+    market = detectMarketFromSymbol(symbol);
     if (market) {
-      // Auto-detected market, validate code format
-      if (!validateStockCode(code, market)) {
-        throw new Error(getStockCodeValidationError(code, market));
+      // Auto-detected market, validate symbol format
+      if (!validateStockSymbol(symbol, market)) {
+        throw new Error(getStockSymbolValidationError(symbol, market));
       }
       return market;
     }
@@ -222,13 +221,13 @@ export function validateMarketAndCode(code: string, marketStr?: string): Market 
   
   // Market was provided and is valid, or auto-detection failed
   if (!market) {
-    throw new Error(`Invalid market code. ${getMarketHelpText()}. Cannot auto-detect market from code ${code}.`);
+    throw new Error(`Invalid market code. ${getMarketHelpText()}. Cannot auto-detect market from symbol ${symbol}.`);
   }
   
-  if (!validateStockCode(code, market)) {
-    throw new Error(getStockCodeValidationError(code, market));
+  if (!validateStockSymbol(symbol, market)) {
+    throw new Error(getStockSymbolValidationError(symbol, market));
   }
-
+  
   return market;
 }
 
@@ -262,7 +261,7 @@ export function parseDate(dateStr: string): Date {
  */
 export function formatQuoteTable(quote: RealtimeQuote, marketName: string): string {
   const lines: string[] = [];
-  lines.push(`\n${quote.name} (${quote.code}) - ${marketName}`);
+  lines.push(`\n${quote.name} (${quote.symbol}) - ${marketName}`);
   lines.push('─'.repeat(50));
   lines.push(`最新价:     ${quote.latestPrice.toFixed(2)}`);
   lines.push(`今开:       ${quote.open.toFixed(2)}`);
@@ -333,4 +332,96 @@ export function validateDateFormat(date: string, fieldName: string): void {
   if (date && !/^\d{8}$/.test(date)) {
     throw new Error(`${fieldName} must be in YYYYMMDD format`);
   }
+}
+
+/**
+ * Format market detection results as table
+ */
+export function formatDetectionTable(results: MarketDetectionResult[]): string {
+  const lines: string[] = [];
+  lines.push('Market | Market Name | Symbol | Name');
+  lines.push('─'.repeat(70));
+
+  for (const result of results) {
+    lines.push(`${result.market.toString().padEnd(6)} | ${result.marketName.padEnd(11)} | ${result.symbol.padEnd(6)} | ${result.name}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Format market detection results as text
+ */
+export function formatDetectionText(results: MarketDetectionResult[]): string {
+  const lines: string[] = [];
+  for (const result of results) {
+    lines.push(`Market ${result.market} (${result.marketName}): ${result.name} (${result.symbol})`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Check if market is a US market (105 or 107)
+ */
+export function isUSMarket(market: Market | number): boolean {
+  const marketNum = typeof market === 'number' ? market : market as number;
+  return marketNum === Market.US || marketNum === Market.US_ETF || marketNum === 105 || marketNum === 107;
+}
+
+/**
+ * Build referer URL based on market and stock symbol
+ * Used for East Money API requests to set proper referer header
+ */
+export function buildRefererUrl(symbol: string, market: Market | number): string {
+  const marketNum = typeof market === 'number' ? market : market as number;
+  // US stocks/ETFs use /us/ prefix (market codes 105 or 107)
+  if (isUSMarket(marketNum)) {
+    return `https://quote.eastmoney.com/us/${symbol}.html`;
+  }
+  // Hong Kong stocks use /hk/ prefix
+  if (marketNum === Market.HongKong) {
+    return `https://quote.eastmoney.com/hk/${symbol}.html`;
+  }
+  // Shanghai stocks (688xxx) use /kcb/ prefix
+  if (marketNum === Market.Shanghai && symbol.startsWith('688')) {
+    return `https://quote.eastmoney.com/kcb/${symbol}.html`;
+  }
+  // Shenzhen stocks use /sz prefix
+  if (marketNum === Market.Shenzhen) {
+    return `https://quote.eastmoney.com/sz${symbol}.html`;
+  }
+  // Default for other Shanghai stocks
+  return `https://quote.eastmoney.com/sh${symbol}.html`;
+}
+
+/**
+ * Check if a field exists in raw data object
+ * Helper function for parsing API responses
+ */
+export function hasField(field: string, rawData: any): boolean {
+  return field in rawData && rawData[field] !== undefined && rawData[field] !== null;
+}
+
+/**
+ * Convert price from "分" (cents) to "元" (yuan)
+ * East Money API returns prices in cents (分), need to convert to yuan (元)
+ */
+export function convertPriceFromCents(value: number | undefined | null): number {
+  return (value ?? 0) / 100;
+}
+
+/**
+ * Calculate price change amount and percentage
+ * Returns both changeAmount and changePercent
+ */
+export function calculatePriceChange(
+  latestPrice: number,
+  previousClose: number
+): { changeAmount: number; changePercent: number } | { changeAmount: undefined; changePercent: undefined } {
+  if (previousClose === 0) {
+    return { changeAmount: undefined, changePercent: undefined };
+  }
+  const changeAmount = latestPrice - previousClose;
+  const changePercent = (changeAmount / previousClose) * 100;
+  return { changeAmount, changePercent };
 }

@@ -61,7 +61,7 @@ function formatSSEData(data: any, type: SSEConnectionType): string {
  */
 function createDataHandler(
   format: OutputFormat,
-  code: string,
+  symbol: string,
   quiet: boolean,
   market?: Market
 ): (data: any, type: SSEConnectionType) => void {
@@ -73,19 +73,19 @@ function createDataHandler(
     let output: string;
 
     if (format === 'json') {
-      const jsonOutput: any = { code, type, data, timestamp: Date.now() };
+      const jsonOutput: any = { symbol, type, data, timestamp: Date.now() };
       if (market !== undefined) {
         jsonOutput.market = market;
       }
       output = JSON.stringify(jsonOutput, null, 2) + '\n';
     } else if (format === 'table') {
       const formatted = formatSSEData(data, type);
-      const prefix = market !== undefined ? `[${code}]` : '';
+      const prefix = market !== undefined ? `[${symbol}]` : '';
       output = `\n${prefix} ${type.toUpperCase()}:\n${formatted}\n\n`;
     } else {
       // text format - simplified output
       const formatted = formatSSEData(data, type);
-      const prefix = market !== undefined ? `[${code}]` : '';
+      const prefix = market !== undefined ? `[${symbol}]` : '';
       output = `${prefix} ${type.toUpperCase()}: ${formatted}\n`;
     }
 
@@ -104,12 +104,12 @@ export function registerStreamCommand(parentCommand: Command, commonOptions: Com
     .description('Stream real-time stock data using SSE')
     .alias('s');
 
-  // Apply common options (code and market are handled as specific options for stream)
-  // Note: stream uses optional code, not required code
+  // Apply common options (symbol and market are handled as specific options for stream)
+  // Note: stream uses optional symbol, not required symbol
   
   // Command-specific options
   streamCommand
-    .option('-c, --code <code>', 'Stock code (e.g., 300427). Required if --watchlist is not used.');
+    .option('-s, --symbol <symbol>', 'Stock symbol (e.g., 300427). Required if --watchlist is not used.');
   
   // Market option is optional for stream (will auto-detect if not provided)
   if (commonOptions.marketOptional) {
@@ -148,21 +148,21 @@ export function registerStreamCommand(parentCommand: Command, commonOptions: Com
           // Stream watchlist
           const watchlist = getWatchlist();
           if (watchlist.length === 0) {
-            logger.error('Watchlist is empty. Add stocks first using: emst watchlist add <code>');
+            logger.error('Watchlist is empty. Add stocks first using: emst watchlist add <symbol>');
             return;
           }
 
           outputProgress(`Streaming ${watchlist.length} stocks from watchlist...`, options.quiet);
 
           for (const entry of watchlist) {
-            const dataHandler = createDataHandler(format, entry.code, options.quiet || false, entry.market);
+            const dataHandler = createDataHandler(format, entry.symbol, options.quiet || false, entry.market);
             const errorHandler = (error: Error, type: SSEConnectionType) => {
-              logger.error(`Error for ${entry.code} (${type}):`, error.message);
+              logger.error(`Error for ${entry.symbol} (${type}):`, error.message);
             };
 
             await crawler.startSSEStream(
               {
-                code: entry.code,
+                symbol: entry.symbol,
                 market: entry.market,
                 types,
               },
@@ -172,26 +172,26 @@ export function registerStreamCommand(parentCommand: Command, commonOptions: Com
           }
         } else {
           // Stream single stock
-          if (!options.code) {
-            logger.error('Stock code is required. Use --code <code> or --watchlist');
+          if (!options.symbol) {
+            logger.error('Stock symbol is required. Use --symbol <symbol> or --watchlist');
             return;
           }
 
           const { market, marketName } = resolveMarket({
-            code: options.code,
+            symbol: options.symbol,
             marketOption: options.market,
             quiet: options.quiet,
           });
-          outputProgress(`Streaming ${options.code} (${marketName})...`, options.quiet);
+          outputProgress(`Streaming ${options.symbol} (${marketName})...`, options.quiet);
 
-          const dataHandler = createDataHandler(format, options.code, options.quiet || false, market);
+          const dataHandler = createDataHandler(format, options.symbol, options.quiet || false, market);
           const errorHandler = (error: Error, type: SSEConnectionType) => {
             logger.error(`Error (${type}):`, error.message);
           };
 
           await crawler.startSSEStream(
             {
-              code: options.code,
+              symbol: options.symbol,
               market,
               types,
             },

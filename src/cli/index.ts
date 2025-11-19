@@ -27,14 +27,14 @@ export const commonOptions: CommonOptions = {
     '-m, --market <market>',
     'Market code (0=Shenzhen, 1=Shanghai, 105=US, 107=US ETF, 116=HK). Auto-detected for A-share codes if not provided.'
   ),
-  code: (cmd: Command) => cmd.requiredOption('-c, --code <code>', 'Stock code (e.g., 688005 for A-share, 00700 for HK, AAPL for US)'),
+  symbol: (cmd: Command) => cmd.requiredOption('-s, --symbol <symbol>', 'Stock symbol (e.g., 688005 for A-share, 00700 for HK, AAPL for US)'),
   timeframe: (cmd: Command) => cmd.option(
     '-t, --timeframe <timeframe>',
     'K-line timeframe (daily/weekly/monthly/5min/15min/30min/60min)',
     'daily'
   ),
   dateRange: (cmd: Command) => {
-    cmd.option('-s, --start <date>', 'Start date in YYYYMMDD format');
+    cmd.option('--start <date>', 'Start date in YYYYMMDD format');
     cmd.option('-e, --end <date>', 'End date in YYYYMMDD format');
     return cmd;
   },

@@ -27,7 +27,7 @@ export function validateFormat(format: string | undefined, defaultFormat: Output
 }
 
 /**
- * Apply common stock command options (code, market, format, logging)
+ * Apply common stock command options (symbol, market, format, logging)
  * This helper standardizes the option application pattern
  */
 export function applyStockCommandOptions(
@@ -36,7 +36,7 @@ export function applyStockCommandOptions(
   formatDefault: OutputFormat = 'table'
 ): void {
   // Apply common options
-  commonOptions.code(command);
+  commonOptions.symbol(command);
   // Market option is optional (will auto-detect if not provided)
   if (commonOptions.marketOptional) {
     commonOptions.marketOptional(command);
@@ -50,7 +50,7 @@ export function applyStockCommandOptions(
 }
 
 /**
- * Apply format and logging options for commands that don't need code/market
+ * Apply format and logging options for commands that don't need symbol/market
  */
 export function applyFormatAndLoggingOptions(
   command: Command,

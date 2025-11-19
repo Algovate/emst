@@ -4,12 +4,13 @@ import { Market } from '../infra/types.js';
 import { logger } from '../infra/logger.js';
 import { SSE_CONSTANTS } from '../infra/sse-constants.js';
 import { getConfig } from '../infra/config.js';
+import { buildRefererUrl } from './utils.js';
 
 /**
  * Get UT token from East Money page
  * The token is typically found in the page's JavaScript code or network requests
  */
-export async function getUtToken(code: string, market: Market): Promise<string> {
+export async function getUtToken(symbol: string, market: Market): Promise<string> {
   const browserManager = BrowserManager.getInstance();
   const browser = await browserManager.getBrowser();
   const page = await browser.newPage();
@@ -17,15 +18,8 @@ export async function getUtToken(code: string, market: Market): Promise<string> 
   let navigationSucceeded = false;
 
   try {
-    // Build referer URL
-    let refererUrl: string;
-    if (market === Market.Shanghai && code.startsWith('688')) {
-      refererUrl = `https://quote.eastmoney.com/kcb/${code}.html`;
-    } else if (market === Market.Shenzhen) {
-      refererUrl = `https://quote.eastmoney.com/sz${code}.html`;
-    } else {
-      refererUrl = `https://quote.eastmoney.com/sh${code}.html`;
-    }
+    // Build referer URL using shared utility
+    const refererUrl = buildRefererUrl(symbol, market);
 
     logger.debug(`Fetching UT token from ${refererUrl}`);
 

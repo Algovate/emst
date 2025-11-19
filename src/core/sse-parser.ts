@@ -9,6 +9,7 @@ import {
   RealtimeQuote,
 } from '../infra/types.js';
 import { logger } from '../infra/logger.js';
+import { hasField, convertPriceFromCents, calculatePriceChange } from '../utils/utils.js';
 
 /**
  * Parse SSE raw response and route to appropriate parser based on rt (response type)
@@ -28,7 +29,7 @@ export function parseSSEResponse(rawData: string): SSERawResponse | null {
  */
 export function parseSSEQuoteData(
   rawResponse: SSERawResponse,
-  code: string,
+  symbol: string,
   market: Market
 ): SSEQuoteData | null {
   if (rawResponse.rt !== 4) {
@@ -42,23 +43,19 @@ export function parseSSEQuoteData(
 
   const data = rawResponse.data;
   
-  // Helper to check if a field exists in raw data
-  const hasField = (field: string): boolean => field in data && data[field] !== undefined && data[field] !== null;
-  
   // Convert price from "分" (cents) to "元" (yuan)
-  const latestPrice = (data.f43 ?? data.f60 ?? data.f301 ?? 0) / 100;
-  const open = (data.f44 ?? 0) / 100;
-  const previousClose = (data.f45 ?? 0) / 100;
-  const high = (data.f46 ?? 0) / 100;
-  const buy1Price = hasField('f51') ? (data.f51 ?? 0) / 100 : undefined;
-  const sell1Price = hasField('f52') ? (data.f52 ?? 0) / 100 : undefined;
+  const latestPrice = convertPriceFromCents(data.f43 ?? data.f60 ?? data.f301);
+  const open = convertPriceFromCents(data.f44);
+  const previousClose = convertPriceFromCents(data.f45);
+  const high = convertPriceFromCents(data.f46);
+  const buy1Price = hasField('f51', data) ? convertPriceFromCents(data.f51) : undefined;
+  const sell1Price = hasField('f52', data) ? convertPriceFromCents(data.f52) : undefined;
 
-  const changeAmount = previousClose !== 0 ? latestPrice - previousClose : undefined;
-  const changePercent = previousClose !== 0 ? (changeAmount! / previousClose) * 100 : undefined;
+  const { changeAmount, changePercent } = calculatePriceChange(latestPrice, previousClose);
 
   const quote: SSEQuoteData = {
-    code: data.f57 ?? code,
-    name: hasField('f58') ? (data.f58 ?? '') : '',
+    symbol: data.f57 ?? symbol,
+    name: hasField('f58', data) ? (data.f58 ?? '') : '',
     market: data.f107 ?? market,
     latestPrice,
     open,
@@ -76,17 +73,17 @@ export function parseSSEQuoteData(
     rawData: data, // Preserve raw data so merge function can check which fields were provided
     buy1Price,
     sell1Price,
-    buy1Volume: hasField('f161') ? data.f161 : undefined,
-    buy2Volume: hasField('f162') ? data.f162 : undefined,
-    buy3Volume: hasField('f163') ? data.f163 : undefined,
-    buy4Volume: hasField('f164') ? data.f164 : undefined,
-    sell1Volume: hasField('f167') ? data.f167 : undefined,
-    sell2Volume: hasField('f168') ? data.f168 : undefined,
-    sell3Volume: hasField('f169') ? data.f169 : undefined,
-    sell4Volume: hasField('f170') ? data.f170 : undefined,
-    volumeRatio: hasField('f92') ? data.f92 : undefined,
-    turnoverRate: hasField('f107') ? data.f107 : undefined,
-    peRatio: hasField('f111') ? data.f111 : undefined,
+    buy1Volume: hasField('f161', data) ? data.f161 : undefined,
+    buy2Volume: hasField('f162', data) ? data.f162 : undefined,
+    buy3Volume: hasField('f163', data) ? data.f163 : undefined,
+    buy4Volume: hasField('f164', data) ? data.f164 : undefined,
+    sell1Volume: hasField('f167', data) ? data.f167 : undefined,
+    sell2Volume: hasField('f168', data) ? data.f168 : undefined,
+    sell3Volume: hasField('f169', data) ? data.f169 : undefined,
+    sell4Volume: hasField('f170', data) ? data.f170 : undefined,
+    volumeRatio: hasField('f92', data) ? data.f92 : undefined,
+    turnoverRate: hasField('f107', data) ? data.f107 : undefined,
+    peRatio: hasField('f111', data) ? data.f111 : undefined,
   };
 
   return quote;

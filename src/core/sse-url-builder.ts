@@ -8,11 +8,11 @@ import { getRandomServer, generateCnameHash } from '../utils/sse-utils.js';
 export class SSEUrlBuilder {
   /**
    * Build SSE URL based on connection type
-   * For NEWS type, code, market, and utToken are ignored
+   * For NEWS type, symbol, market, and utToken are ignored
    */
   static buildUrl(
     type: SSEConnectionType,
-    code: string,
+    symbol: string,
     market: Market,
     utToken: string
   ): string {
@@ -20,13 +20,13 @@ export class SSEUrlBuilder {
 
     switch (type) {
       case SSEConnectionType.NEWS:
-        // News SSE is global and doesn't need code/market/token
+        // News SSE is global and doesn't need symbol/market/token
         return this.buildNewsUrl(server);
       case SSEConnectionType.QUOTE:
       case SSEConnectionType.TREND:
       case SSEConnectionType.DETAIL:
         // Stock-specific streams need secid and token
-        const secid = buildSecid(market, code);
+        const secid = buildSecid(market, symbol);
         switch (type) {
           case SSEConnectionType.QUOTE:
             return this.buildQuoteUrl(server, secid, utToken);

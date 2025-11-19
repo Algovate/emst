@@ -25,7 +25,7 @@ export const API_RESPONSE_CODES = {
  */
 export const ERROR_MESSAGES = {
   INVALID_MARKET: 'Invalid market code',
-  INVALID_STOCK_CODE: 'Invalid stock code format',
+  INVALID_STOCK_CODE: 'Invalid stock symbol format',
   INVALID_TIMEFRAME: 'Invalid timeframe',
   INVALID_DATE_FORMAT: 'Invalid date format',
   INVALID_FQT: 'FQT must be 0 (none), 1 (forward), or 2 (backward)',

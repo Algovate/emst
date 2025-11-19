@@ -59,7 +59,7 @@ export function outputData(data: any, format: OutputFormat = 'json', options: Ou
       // For table format, try to format based on data type
       if (Array.isArray(data) && data.length > 0) {
         output = formatKlineTable(data);
-      } else if (data && typeof data === 'object' && 'code' in data && 'latestPrice' in data) {
+      } else if (data && typeof data === 'object' && 'symbol' in data && 'latestPrice' in data) {
         // Realtime quote
         output = formatQuoteTable(data as RealtimeQuote, options.marketName || '');
       } else {

@@ -34,7 +34,7 @@ export class SSEMessageHandler {
     switch (type) {
       case SSEConnectionType.QUOTE:
         if (typeof rawData !== 'string') {
-          return parseSSEQuoteData(rawData, options.code, options.market);
+          return parseSSEQuoteData(rawData, options.symbol, options.market);
         }
         return null;
 

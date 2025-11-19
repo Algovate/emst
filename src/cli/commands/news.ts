@@ -240,10 +240,10 @@ async function handleNewsStreamAction(options: NewsStreamOptions): Promise<void>
   const crawler = new EastMoneyCrawler();
   
   // Create stream options for news
-  // Note: News SSE is global (not stock-specific), but SSEStreamOptions requires code/market
+  // Note: News SSE is global (not stock-specific), but SSEStreamOptions requires symbol/market
   // These values are ignored by the news URL builder - news stream doesn't need them
   const streamOptions: SSEStreamOptions = {
-    code: '', // Empty for news (not used)
+    symbol: '', // Empty for news (not used)
     market: 0, // Dummy value (not used)
     types: [SSEConnectionType.NEWS],
   };

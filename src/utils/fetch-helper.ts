@@ -7,7 +7,7 @@ import { logger } from '../infra/logger.js';
  * Fetch and cache helper
  */
 export async function fetchWithCache(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   crawlerOptions: CrawlerOptions,
@@ -19,7 +19,7 @@ export async function fetchWithCache(
   if (useCache) {
     try {
       // Check cache directly
-      const cachedData = getCachedData(code, market, timeframe, startDate, endDate, fqt);
+      const cachedData = getCachedData(symbol, market, timeframe, startDate, endDate, fqt);
       if (cachedData && cachedData.length > 0) {
         logger.info(`Using cached data (${cachedData.length} records)`);
         return cachedData;
@@ -30,18 +30,15 @@ export async function fetchWithCache(
   }
 
   // Fetch fresh data
-  if (!useCache) {
-    logger.info('Cache disabled, fetching fresh data...');
-  } else {
-    logger.info('Cache miss, fetching fresh data...');
-  }
+  const logMessage = useCache ? 'Cache miss, fetching fresh data...' : 'Cache disabled, fetching fresh data...';
+  logger.info(logMessage);
 
   const crawler = new EastMoneyCrawler();
   const data = await crawler.fetchKlineData(crawlerOptions);
 
   // Save to cache
   if (data.length > 0) {
-    setCachedData(code, market, timeframe, data, true, fqt);
+    setCachedData(symbol, market, timeframe, data, true, fqt);
   }
 
   return data;

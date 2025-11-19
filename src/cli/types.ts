@@ -7,7 +7,7 @@ import { Command } from 'commander';
 export type OutputFormat = 'json' | 'table' | 'text';
 
 export interface FetchOptions {
-  code: string;
+  symbol: string;
   market?: string;
   timeframe?: string;
   start?: string;
@@ -22,7 +22,7 @@ export interface FetchOptions {
 }
 
 export interface QuoteOptions {
-  code: string;
+  symbol: string;
   market?: string;
   format?: OutputFormat;
   verbose?: boolean;
@@ -40,7 +40,7 @@ export interface SyncOptions {
 }
 
 export interface StreamOptions {
-  code?: string;
+  symbol?: string;
   market?: string;
   watchlist?: boolean;
   types?: string;
@@ -66,13 +66,20 @@ export interface NewsStreamOptions {
   verbose?: boolean;
 }
 
+export interface DetectOptions {
+  symbol: string;
+  format?: OutputFormat;
+  verbose?: boolean;
+  quiet?: boolean;
+}
+
 /**
  * Common options builder type
  */
 export interface CommonOptions {
   market: (cmd: Command) => Command;
   marketOptional?: (cmd: Command) => Command;
-  code: (cmd: Command) => Command;
+  symbol: (cmd: Command) => Command;
   timeframe: (cmd: Command) => Command;
   dateRange: (cmd: Command) => Command;
   output: (cmd: Command) => Command;

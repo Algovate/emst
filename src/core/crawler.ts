@@ -17,7 +17,7 @@ import {
   SSEErrorCallback,
   SSEConnectionType,
 } from '../infra/types.js';
-import { buildSecid, parseJSONPResponse, parseKlineRecord } from '../utils/utils.js';
+import { buildSecid, parseJSONPResponse, parseKlineRecord, buildRefererUrl, isUSMarket, convertPriceFromCents, calculatePriceChange } from '../utils/utils.js';
 import { getConfig } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
 import { parseKlineResponseData, parseKlineResponseObject } from './response-parser.js';
@@ -78,7 +78,7 @@ export class EastMoneyCrawler {
   /**
    * Initialize cookies by setting essential tracking cookies
    */
-  private async initializeCookies(code?: string, market?: Market): Promise<void> {
+  private async initializeCookies(symbol?: string, market?: Market): Promise<void> {
     if (this.cookiesInitialized) {
       return;
     }
@@ -128,61 +128,20 @@ export class EastMoneyCrawler {
     ).join('');
   }
 
-  /**
-   * Check if market is a US market (105 or 107)
-   */
-  private isUSMarket(market: Market | number): boolean {
-    const marketNum = typeof market === 'number' ? market : market as number;
-    return marketNum === Market.US || marketNum === Market.US_ETF || marketNum === 105 || marketNum === 107;
-  }
-
-  /**
-   * Get alternative US market code (107 -> 105, 105/US -> 107)
-   */
-  private getAlternativeUSMarket(market: Market | number): number {
-    const marketNum = typeof market === 'number' ? market : market as number;
-    // If current is 107 (US_ETF), try 105 (US), otherwise try 107
-    return (marketNum === 107 || marketNum === Market.US_ETF) ? 105 : 107;
-  }
-
-  /**
-   * Build referer URL based on market and stock code
-   */
-  private buildRefererUrl(code: string, market: Market | number): string {
-    const marketNum = typeof market === 'number' ? market : market as number;
-    // US stocks/ETFs use /us/ prefix (market codes 105 or 107)
-    if (this.isUSMarket(marketNum)) {
-      return `https://quote.eastmoney.com/us/${code}.html`;
-    }
-    // Hong Kong stocks use /hk/ prefix
-    if (marketNum === Market.HongKong) {
-      return `https://quote.eastmoney.com/hk/${code}.html`;
-    }
-    // Shanghai stocks (688xxx) use /kcb/ prefix
-    if (marketNum === Market.Shanghai && code.startsWith('688')) {
-      return `https://quote.eastmoney.com/kcb/${code}.html`;
-    }
-    // Shenzhen stocks use /sz prefix
-    if (marketNum === Market.Shenzhen) {
-      return `https://quote.eastmoney.com/sz${code}.html`;
-    }
-    // Default for other Shanghai stocks
-    return `https://quote.eastmoney.com/sh${code}.html`;
-  }
 
   /**
    * Initialize a browser page for a symbol (navigate to referer to get cookies)
    * Returns the page which can be reused for multiple API calls
    */
   private async initializeBrowserPageForSymbol(
-    code: string,
+    symbol: string,
     market: Market
   ): Promise<Page> {
     if (!this.browserManager) {
       throw new Error(ERROR_MESSAGES.BROWSER_NOT_INITIALIZED);
     }
 
-    const refererUrl = this.buildRefererUrl(code, market);
+    const refererUrl = buildRefererUrl(symbol, market);
     const page = await this.browserManager.newPage();
 
     // Visit referer page to initialize cookies
@@ -280,7 +239,7 @@ export class EastMoneyCrawler {
    */
   private buildKlineParams(options: CrawlerOptions): URLSearchParams {
     const {
-      code,
+      symbol,
       market = this.config.defaults?.market || Market.Shanghai,
       timeframe = this.config.defaults?.timeframe as Timeframe || 'daily',
       startDate,
@@ -289,7 +248,7 @@ export class EastMoneyCrawler {
       fqt = this.config.defaults?.fqt || 1,
     } = options;
 
-    const secid = buildSecid(market, code);
+    const secid = buildSecid(market, symbol);
     const klt = TIMEFRAME_MAP[timeframe];
     const beg = startDate || '0';
     const callback = `jQuery${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
@@ -319,21 +278,20 @@ export class EastMoneyCrawler {
   /**
    * Parse quote data from API response
    */
-  private parseQuoteData(quoteData: any, code: string, market: Market): RealtimeQuote {
-    const latestPrice = (quoteData.f43 ?? quoteData.f60 ?? quoteData.f301 ?? 0) / 100;
-    const open = (quoteData.f44 ?? 0) / 100;
-    const previousClose = (quoteData.f45 ?? 0) / 100;
-    const high = (quoteData.f46 ?? 0) / 100;
+  private parseQuoteData(quoteData: any, symbol: string, market: Market): RealtimeQuote {
+    const latestPrice = convertPriceFromCents(quoteData.f43 ?? quoteData.f60 ?? quoteData.f301);
+    const open = convertPriceFromCents(quoteData.f44);
+    const previousClose = convertPriceFromCents(quoteData.f45);
+    const high = convertPriceFromCents(quoteData.f46);
     const volume = quoteData.f47 ?? 0;
     const amount = quoteData.f48 ?? 0;
     const totalMarketValue = quoteData.f137;
     const circulatingMarketValue = quoteData.f170;
 
-    const changeAmount = latestPrice - previousClose;
-    const changePercent = previousClose !== 0 ? (changeAmount / previousClose) * 100 : 0;
+    const { changeAmount, changePercent } = calculatePriceChange(latestPrice, previousClose);
 
     return {
-      code: quoteData.f57 ?? code,
+      symbol: quoteData.f57 ?? symbol,
       name: quoteData.f58 ?? '',
       market: quoteData.f107 ?? market,
       latestPrice,
@@ -343,8 +301,8 @@ export class EastMoneyCrawler {
       low: high, // API doesn't provide separate low in real-time quote
       volume,
       amount,
-      changeAmount: previousClose !== 0 ? changeAmount : undefined,
-      changePercent: previousClose !== 0 ? changePercent : undefined,
+      changeAmount,
+      changePercent,
       totalMarketValue,
       circulatingMarketValue,
       timestamp: Date.now(),
@@ -355,42 +313,30 @@ export class EastMoneyCrawler {
    * Fetch K-line data using browser (Puppeteer) to bypass TLS fingerprinting
    */
   private async browserFetchKlineData(options: CrawlerOptions): Promise<KlineData[]> {
-    const { code, market = Market.Shanghai } = options;
+    const { symbol, market = Market.Shanghai } = options;
     
-    // Try primary market code first
-    let result = await this.browserFetchKlineDataWithMarket(code, market, options);
-    
-    // For US stocks/ETFs, if rc:100 (no data), try alternative market codes
-    if (result.length === 0 && this.isUSMarket(market)) {
-      const alternativeMarket = this.getAlternativeUSMarket(market);
-      logger.debug(`Trying alternative market code ${alternativeMarket} for US stock ${code}...`);
-      result = await this.browserFetchKlineDataWithMarket(code, alternativeMarket, options);
-      if (result.length > 0) {
-        logger.info(`Found data for ${code} using market code ${alternativeMarket}`);
-      }
-    }
-    
-    return result;
+    // Use user-provided market code directly - no detection, no fallback
+    return await this.browserFetchKlineDataWithMarket(symbol, market, options);
   }
 
   /**
    * Fetch K-line data using browser with a specific market code
    */
   private async browserFetchKlineDataWithMarket(
-    code: string,
+    symbol: string,
     market: Market | number,
     options: CrawlerOptions
   ): Promise<KlineData[]> {
     const params = this.buildKlineParams({ ...options, market: market as Market });
     const url = `${this.apiBaseUrl}?${params.toString()}`;
-    const refererUrl = this.buildRefererUrl(code, market as Market);
+    const refererUrl = buildRefererUrl(symbol, market as Market);
 
-    logger.debug(`Fetching data using browser for ${code} (${market})...`);
+    logger.debug(`Fetching data using browser for ${symbol} (${market})...`);
 
-    const responseText = await this.browserFetchUrl(url, refererUrl, `K-line data for ${code}`);
+    const responseText = await this.browserFetchUrl(url, refererUrl, `K-line data for ${symbol}`);
 
     // Parse and validate response using unified parser
-    return parseKlineResponseData(responseText, code);
+    return parseKlineResponseData(responseText, symbol);
   }
 
   /**
@@ -398,7 +344,7 @@ export class EastMoneyCrawler {
    * More efficient for sync operations
    */
   async browserFetchKlineDataBatch(
-    code: string,
+    symbol: string,
     market: Market,
     timeframes: Timeframe[],
     options: Partial<CrawlerOptions> = {}
@@ -407,20 +353,20 @@ export class EastMoneyCrawler {
       throw new Error(ERROR_MESSAGES.BROWSER_MODE_NOT_ENABLED);
     }
 
-    logger.info(`Fetching data using browser for ${code} (${market}) - ${timeframes.length} timeframes...`);
+    logger.info(`Fetching data using browser for ${symbol} (${market}) - ${timeframes.length} timeframes...`);
 
     const results = new Map<Timeframe, KlineData[]>();
     let page: Page | null = null;
 
     try {
       // Initialize page once for the symbol
-      page = await this.initializeBrowserPageForSymbol(code, market);
+      page = await this.initializeBrowserPageForSymbol(symbol, market);
 
       // Fetch each timeframe using the same page
       for (const timeframe of timeframes) {
         try {
           const params = this.buildKlineParams({
-            code,
+            symbol,
             market,
             timeframe,
             ...options,
@@ -430,14 +376,14 @@ export class EastMoneyCrawler {
           const responseText = await this.browserFetchUrlWithPage(
             page,
             url,
-            `${timeframe} K-line data for ${code}`
+            `${timeframe} K-line data for ${symbol}`
           );
 
           // Parse and validate response using unified parser
-          const data = parseKlineResponseData(responseText, code);
+          const data = parseKlineResponseData(responseText, symbol);
           results.set(timeframe, data);
         } catch (error) {
-          logger.error(`Error fetching ${timeframe} for ${code}:`, error instanceof Error ? error.message : String(error));
+          logger.error(`Error fetching ${timeframe} for ${symbol}:`, error instanceof Error ? error.message : String(error));
           results.set(timeframe, []);
         }
       }
@@ -464,32 +410,20 @@ export class EastMoneyCrawler {
       }
     }
 
-    const { code, market = Market.Shanghai } = options;
+    const { symbol, market = Market.Shanghai } = options;
 
-    // Try primary market code first
-    let result = await this.fetchKlineDataWithMarket(options);
-    
-    // For US stocks/ETFs, if rc:100 (no data), try alternative market codes
-    if (result.length === 0 && this.isUSMarket(market)) {
-      const alternativeMarket = this.getAlternativeUSMarket(market);
-      logger.debug(`Trying alternative market code ${alternativeMarket} for US stock ${code}...`);
-      result = await this.fetchKlineDataWithMarket({ ...options, market: alternativeMarket as Market });
-      if (result.length > 0) {
-        logger.info(`Found data for ${code} using market code ${alternativeMarket}`);
-      }
-    }
-    
-    return result;
+    // Use user-provided market code directly - no detection, no fallback
+    return await this.fetchKlineDataWithMarket(options);
   }
 
   /**
    * Fetch K-line data with a specific market code using axios
    */
   private async fetchKlineDataWithMarket(options: CrawlerOptions): Promise<KlineData[]> {
-    const { code, market = Market.Shanghai } = options;
+    const { symbol, market = Market.Shanghai } = options;
 
     // Initialize cookies first with the specific stock info
-    await this.initializeCookies(code, market);
+    await this.initializeCookies(symbol, market);
 
     const params = this.buildKlineParams(options);
 
@@ -498,14 +432,14 @@ export class EastMoneyCrawler {
         params,
         responseType: 'text',
         headers: {
-          'Referer': this.buildRefererUrl(code, market),
+          'Referer': buildRefererUrl(symbol, market),
         },
       });
 
       const klineResponse = this.parseKlineResponse(response.data);
       
       // Use unified parser to handle response validation
-      return parseKlineResponseObject(klineResponse, code);
+      return parseKlineResponseObject(klineResponse, symbol);
     } catch (error) {
       // Auto-fallback to browser mode if TLS fingerprinting detected
       if (axios.isAxiosError(error)) {
@@ -593,13 +527,13 @@ export class EastMoneyCrawler {
   /**
    * Get stock information (name, market, etc.) from the API response
    */
-  async getStockInfo(code: string, market: Market = Market.Shanghai): Promise<{
-    code: string;
+  async getStockInfo(symbol: string, market: Market = Market.Shanghai): Promise<{
+    symbol: string;
     name: string;
     market: number;
   }> {
     const params = this.buildKlineParams({
-      code,
+      symbol,
       market,
       timeframe: 'daily',
       limit: 1,
@@ -613,7 +547,7 @@ export class EastMoneyCrawler {
     const apiResponse = this.parseKlineResponse(response.data);
     
     return {
-      code: apiResponse.data.code,
+      symbol: apiResponse.data.code,
       name: apiResponse.data.name,
       market: apiResponse.data.market,
     };
@@ -622,8 +556,8 @@ export class EastMoneyCrawler {
   /**
    * Fetch real-time quote using browser (Puppeteer)
    */
-  private async browserFetchRealtimeQuote(code: string, market: Market): Promise<RealtimeQuote> {
-    const secid = buildSecid(market, code);
+  private async browserFetchRealtimeQuote(symbol: string, market: Market): Promise<RealtimeQuote> {
+    const secid = buildSecid(market, symbol);
     const params = new URLSearchParams({
       secid,
       fields: REALTIME_FIELDS,
@@ -631,11 +565,11 @@ export class EastMoneyCrawler {
     });
 
     const url = `${this.realtimeApiUrl}?${params.toString()}`;
-    const refererUrl = this.buildRefererUrl(code, market);
+    const refererUrl = buildRefererUrl(symbol, market);
 
-    logger.info(`Fetching realtime quote using browser for ${code} (${market})...`);
+    logger.info(`Fetching realtime quote using browser for ${symbol} (${market})...`);
 
-    const responseText = await this.browserFetchUrl(url, refererUrl, `realtime quote for ${code}`);
+    const responseText = await this.browserFetchUrl(url, refererUrl, `realtime quote for ${symbol}`);
 
     const data = this.parseRealtimeResponse(responseText);
 
@@ -643,17 +577,17 @@ export class EastMoneyCrawler {
       throw new Error('No data returned from API');
     }
 
-    return this.parseQuoteData(data.data, code, market);
+    return this.parseQuoteData(data.data, symbol, market);
   }
 
   /**
    * Get real-time quote for a stock
    */
-  async getRealtimeQuote(code: string, market: Market = Market.Shanghai): Promise<RealtimeQuote> {
+  async getRealtimeQuote(symbol: string, market: Market = Market.Shanghai): Promise<RealtimeQuote> {
     // Try browser mode first if enabled
     if (this.useBrowser) {
       try {
-        return await this.browserFetchRealtimeQuote(code, market);
+        return await this.browserFetchRealtimeQuote(symbol, market);
       } catch (error) {
         logger.warn('Browser fetch failed, falling back to axios:', error instanceof Error ? error.message : String(error));
         // Fall through to axios method
@@ -661,9 +595,9 @@ export class EastMoneyCrawler {
     }
 
     // Initialize cookies first
-    await this.initializeCookies(code, market);
+    await this.initializeCookies(symbol, market);
 
-    const secid = buildSecid(market, code);
+    const secid = buildSecid(market, symbol);
     const params = new URLSearchParams({
       secid,
       fields: REALTIME_FIELDS,
@@ -682,7 +616,7 @@ export class EastMoneyCrawler {
         throw new Error('No data returned from API');
       }
 
-      return this.parseQuoteData(data.data, code, market);
+      return this.parseQuoteData(data.data, symbol, market);
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(
@@ -739,9 +673,9 @@ export class EastMoneyCrawler {
   /**
    * Stop SSE stream for a stock
    */
-  stopSSEStream(code: string, market: Market): void {
+  stopSSEStream(symbol: string, market: Market): void {
     if (this.sseStreamManager) {
-      this.sseStreamManager.stopStream(code, market);
+      this.sseStreamManager.stopStream(symbol, market);
     }
   }
 
@@ -757,9 +691,9 @@ export class EastMoneyCrawler {
   /**
    * Get latest SSE data for a stock
    */
-  getLatestSSEData(code: string, market: Market, type: SSEConnectionType): any {
+  getLatestSSEData(symbol: string, market: Market, type: SSEConnectionType): any {
     if (this.sseStreamManager) {
-      return this.sseStreamManager.getLatestData(code, market, type);
+      return this.sseStreamManager.getLatestData(symbol, market, type);
     }
     return null;
   }

@@ -21,7 +21,7 @@ import { validateFormat, wrapCommandAction, getFormatOptionHelp, applyStockComma
 export async function handleFetchAction(options: FetchOptions): Promise<void> {
   // Resolve market (auto-detect or validate provided)
   const { market, marketName } = resolveMarket({
-    code: options.code,
+    symbol: options.symbol,
     marketOption: options.market,
     quiet: options.quiet,
   });
@@ -52,7 +52,7 @@ export async function handleFetchAction(options: FetchOptions): Promise<void> {
 
   // Build crawler options
   const crawlerOptions: CrawlerOptions = {
-    code: options.code,
+    symbol: options.symbol,
     market,
     timeframe,
     startDate: options.start,
@@ -65,7 +65,7 @@ export async function handleFetchAction(options: FetchOptions): Promise<void> {
 
   // Output progress information to stderr
   outputProgress('Fetching K-line data...', options.quiet);
-  outputProgress(`Stock Code: ${options.code}`, options.quiet);
+  outputProgress(`Stock Symbol: ${options.symbol}`, options.quiet);
   outputProgress(`Market: ${marketName}`, options.quiet);
   outputProgress(`Timeframe: ${timeframe}`, options.quiet);
   outputProgress(`Adjustment: ${getAdjustmentTypeName(fqt)}`, options.quiet);
@@ -73,7 +73,7 @@ export async function handleFetchAction(options: FetchOptions): Promise<void> {
 
   // Fetch data with cache handling
   const data = await fetchWithCache(
-    options.code,
+    options.symbol,
     market,
     timeframe,
     crawlerOptions,
@@ -160,7 +160,7 @@ export function registerFetchCommand(parentCommand: Command, commonOptions: Comm
     .alias('f');
 
   // Apply common options
-  commonOptions.code(fetchCommand);
+  commonOptions.symbol(fetchCommand);
   // Market option is optional for fetch (will auto-detect if not provided)
   if (commonOptions.marketOptional) {
     commonOptions.marketOptional(fetchCommand);

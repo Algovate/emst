@@ -15,20 +15,20 @@ export function registerQuoteCommand(parentCommand: Command, commonOptions: Comm
     .description('Get real-time quote for a stock')
     .alias('q');
 
-  // Apply common stock command options (code, market, format, logging)
+  // Apply common stock command options (symbol, market, format, logging)
   applyStockCommandOptions(quoteCommand, commonOptions, 'table');
   
   // Define action
   quoteCommand.action(wrapCommandAction(async (options: QuoteOptions) => {
       // Resolve market (auto-detect or validate provided)
       const { market, marketName } = resolveMarket({
-        code: options.code,
+        symbol: options.symbol,
         marketOption: options.market,
         quiet: options.quiet,
       });
 
       const crawler = new EastMoneyCrawler();
-      const quote = await crawler.getRealtimeQuote(options.code, market);
+      const quote = await crawler.getRealtimeQuote(options.symbol, market);
 
       // Output data to stdout using unified output function
       const format = validateFormat(options.format, 'table');

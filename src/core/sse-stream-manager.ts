@@ -11,6 +11,7 @@ import { SSEClient } from './sse-client.js';
 import { SSEMessageHandler } from './sse-message-handler.js';
 import { logger } from '../infra/logger.js';
 import { SSE_CONSTANTS } from '../infra/sse-constants.js';
+import { hasField, calculatePriceChange } from '../utils/utils.js';
 
 /**
  * Stream manager for managing multiple SSE connections
@@ -29,7 +30,7 @@ export class SSEStreamManager {
     onData: SSEStreamCallback<any>,
     onError?: SSEErrorCallback
   ): Promise<void> {
-    const key = this.getStreamKey(options.code, options.market);
+    const key = this.getStreamKey(options.symbol, options.market);
     const types = options.types || [SSEConnectionType.QUOTE];
 
     // Create message handler that parses and caches data
@@ -44,7 +45,7 @@ export class SSEStreamManager {
         if (parsedData) {
           // For quote data, merge with cached data if available
           if (type === SSEConnectionType.QUOTE) {
-            const cachedData = this.getLatestData(options.code, options.market, type);
+            const cachedData = this.getLatestData(options.symbol, options.market, type);
             if (cachedData) {
               // Merge partial update with cached data
               const mergedData = this.mergeQuoteData(cachedData as SSEQuoteData, parsedData as SSEQuoteData);
@@ -75,7 +76,7 @@ export class SSEStreamManager {
 
     // Create error handler
     const errorHandler: SSEErrorCallback = (error, type) => {
-      logger.error(`SSE error for ${options.code} (${type}):`, error);
+      logger.error(`SSE error for ${options.symbol} (${type}):`, error);
       if (onError) {
         onError(error, type);
       }
@@ -96,7 +97,7 @@ export class SSEStreamManager {
       try {
         await client.connect(type);
       } catch (error) {
-        logger.error(`Failed to connect ${type} for ${options.code}:`, error);
+        logger.error(`Failed to connect ${type} for ${options.symbol}:`, error);
         this.clients.delete(clientKey);
         throw error;
       }
@@ -111,8 +112,8 @@ export class SSEStreamManager {
   /**
    * Stop streaming for a stock
    */
-  stopStream(code: string, market: Market): void {
-    const key = this.getStreamKey(code, market);
+  stopStream(symbol: string, market: Market): void {
+    const key = this.getStreamKey(symbol, market);
     const keysToRemove: string[] = [];
 
     for (const [clientKey, client] of this.clients.entries()) {
@@ -149,8 +150,8 @@ export class SSEStreamManager {
   /**
    * Get latest cached data for a stock
    */
-  getLatestData(code: string, market: Market, type: SSEConnectionType): any {
-    const key = this.getStreamKey(code, market);
+  getLatestData(symbol: string, market: Market, type: SSEConnectionType): any {
+    const key = this.getStreamKey(symbol, market);
     const stockData = this.latestData.get(key);
     if (!stockData) {
       return null;
@@ -161,16 +162,16 @@ export class SSEStreamManager {
   /**
    * Get all latest data for a stock
    */
-  getAllLatestData(code: string, market: Market): Map<SSEConnectionType, any> {
-    const key = this.getStreamKey(code, market);
+  getAllLatestData(symbol: string, market: Market): Map<SSEConnectionType, any> {
+    const key = this.getStreamKey(symbol, market);
     return this.latestData.get(key) || new Map();
   }
 
   /**
    * Check if stream is active for a stock
    */
-  isStreamActive(code: string, market: Market, type?: SSEConnectionType): boolean {
-    const key = this.getStreamKey(code, market);
+  isStreamActive(symbol: string, market: Market, type?: SSEConnectionType): boolean {
+    const key = this.getStreamKey(symbol, market);
     
     if (type) {
       const clientKey = `${key}:${type}`;
@@ -192,8 +193,8 @@ export class SSEStreamManager {
   /**
    * Get stream key
    */
-  private getStreamKey(code: string, market: Market): string {
-    return `${market}:${code}`;
+  private getStreamKey(symbol: string, market: Market): string {
+    return `${market}:${symbol}`;
   }
 
   /**
@@ -204,11 +205,6 @@ export class SSEStreamManager {
     const newRawData = newData.rawData || {};
     const cachedRawData = cached.rawData || {};
     
-    // Helper to check if a field exists in raw data
-    const hasField = (field: string, rawData: any): boolean => {
-      return field in rawData && rawData[field] !== undefined && rawData[field] !== null;
-    };
-    
     // Start with cached data as base
     const merged: SSEQuoteData = { ...cached };
     
@@ -217,7 +213,7 @@ export class SSEStreamManager {
     
     // Only update fields that exist in the new data's rawData
     if (hasField('f57', newRawData) || hasField('f43', newRawData) || hasField('f60', newRawData) || hasField('f301', newRawData)) {
-      merged.code = newData.code;
+      merged.symbol = newData.symbol;
       merged.latestPrice = newData.latestPrice;
     }
     
@@ -315,9 +311,10 @@ export class SSEStreamManager {
     merged.svr = newData.svr;
     
     // Recalculate changeAmount and changePercent if we have both latestPrice and previousClose
-    if (merged.latestPrice !== undefined && merged.previousClose !== undefined && merged.previousClose !== 0) {
-      merged.changeAmount = merged.latestPrice - merged.previousClose;
-      merged.changePercent = (merged.changeAmount / merged.previousClose) * 100;
+    if (merged.latestPrice !== undefined && merged.previousClose !== undefined) {
+      const { changeAmount, changePercent } = calculatePriceChange(merged.latestPrice, merged.previousClose);
+      merged.changeAmount = changeAmount;
+      merged.changePercent = changePercent;
     }
     
     return merged;

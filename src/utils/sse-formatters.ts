@@ -5,7 +5,7 @@ import { SSEQuoteData, SSETrendData, SSEDetailData } from '../infra/types.js';
  */
 export function formatSSEQuote(quote: SSEQuoteData): string {
   const lines = [
-    `代码: ${quote.code} | 名称: ${quote.name}`,
+    `代码: ${quote.symbol} | 名称: ${quote.name}`,
     `最新价: ${quote.latestPrice.toFixed(2)} | 涨跌: ${quote.changeAmount?.toFixed(2) || '0.00'} | 涨跌幅: ${quote.changePercent?.toFixed(2) || '0.00'}%`,
     `今开: ${quote.open.toFixed(2)} | 最高: ${quote.high.toFixed(2)} | 昨收: ${quote.previousClose.toFixed(2)}`,
     `成交量: ${quote.volume.toLocaleString()} | 成交额: ${quote.amount.toLocaleString()}`,

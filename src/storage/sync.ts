@@ -133,9 +133,9 @@ async function updateStockNameIfNeeded(
 ): Promise<void> {
   if (!entry.name && hasData) {
     try {
-      const stockInfo = await crawler.getStockInfo(entry.code, entry.market);
+      const stockInfo = await crawler.getStockInfo(entry.symbol, entry.market);
       if (stockInfo.name) {
-        updateWatchlistEntry(entry.code, { name: stockInfo.name });
+        updateWatchlistEntry(entry.symbol, { name: stockInfo.name });
       }
     } catch (error) {
       // Ignore errors when fetching stock info
@@ -162,12 +162,12 @@ async function processBatchResults(
 
     // Check if we need to fetch (cache validation)
     const defaultFqt = getDefaultFqt();
-    if (!options.force && isCacheValid(entry.code, entry.market, timeframe, maxAge, defaultFqt)) {
-      const cacheDateRange = getCacheDateRange(entry.code, entry.market, timeframe, defaultFqt);
+    if (!options.force && isCacheValid(entry.symbol, entry.market, timeframe, maxAge, defaultFqt)) {
+      const cacheDateRange = getCacheDateRange(entry.symbol, entry.market, timeframe, defaultFqt);
       if (cacheDateRange && cacheCoversDateRange(cacheDateRange, options.startDate, options.endDate || DEFAULT_END_DATE)) {
         // Cache already has all requested data
         results.push({
-          symbol: entry.code,
+          symbol: entry.symbol,
           market: entry.market,
           timeframe,
           success: true,
@@ -179,12 +179,12 @@ async function processBatchResults(
 
     // Save fetched data to cache
     if (data.length > 0) {
-      setCachedData(entry.code, entry.market, timeframe, data, true, defaultFqt);
+      setCachedData(entry.symbol, entry.market, timeframe, data, true, defaultFqt);
       hasAnyData = true;
     }
 
     results.push({
-      symbol: entry.code,
+      symbol: entry.symbol,
       market: entry.market,
       timeframe,
       success: true,
@@ -202,7 +202,7 @@ async function processBatchResults(
  * Calculate fetch date range considering cache and options
  */
 function calculateFetchDateRange(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   options: SyncOptions
@@ -212,8 +212,8 @@ function calculateFetchDateRange(
 
   // Check if cache is valid and not forcing refresh
   const defaultFqt = getDefaultFqt();
-  if (!force && isCacheValid(code, market, timeframe, maxAge, defaultFqt)) {
-    const cacheDateRange = getCacheDateRange(code, market, timeframe, defaultFqt);
+  if (!force && isCacheValid(symbol, market, timeframe, maxAge, defaultFqt)) {
+    const cacheDateRange = getCacheDateRange(symbol, market, timeframe, defaultFqt);
     
     if (cacheDateRange) {
       // If no startDate specified, check if cache already covers everything
@@ -238,7 +238,7 @@ function calculateFetchDateRange(
   // If not forcing and cache exists, do incremental sync
   if (!force) {
     const defaultFqt = getDefaultFqt();
-    const cacheDateRange = getCacheDateRange(code, market, timeframe, defaultFqt);
+    const cacheDateRange = getCacheDateRange(symbol, market, timeframe, defaultFqt);
     if (cacheDateRange) {
       const incrementalStart = calculateIncrementalStartDate(cacheDateRange);
       
@@ -270,13 +270,13 @@ async function syncSymbol(
     const defaultFqt = getDefaultFqt();
     
     // Calculate fetch date range
-    const dateRange = calculateFetchDateRange(entry.code, entry.market, timeframe, options);
+    const dateRange = calculateFetchDateRange(entry.symbol, entry.market, timeframe, options);
     
     if (!dateRange) {
       // Cache already has all requested data
-      const cached = getCachedData(entry.code, entry.market, timeframe, startDate, endDate, defaultFqt);
+      const cached = getCachedData(entry.symbol, entry.market, timeframe, startDate, endDate, defaultFqt);
       return {
-        symbol: entry.code,
+        symbol: entry.symbol,
         market: entry.market,
         timeframe,
         success: true,
@@ -286,7 +286,7 @@ async function syncSymbol(
 
     // Fetch data
     const crawlerOptions: CrawlerOptions = {
-      code: entry.code,
+      symbol: entry.symbol,
       market: entry.market,
       timeframe,
       startDate: dateRange.startDate,
@@ -299,7 +299,7 @@ async function syncSymbol(
     
     if (fetchedData.length > 0) {
       // Merge with existing cache
-      setCachedData(entry.code, entry.market, timeframe, fetchedData, true, defaultFqt);
+      setCachedData(entry.symbol, entry.market, timeframe, fetchedData, true, defaultFqt);
     }
 
     // Update stock name if not set and we have data
@@ -307,7 +307,7 @@ async function syncSymbol(
     
     // Success even if no data was fetched (API might not have data for this timeframe)
     return {
-      symbol: entry.code,
+      symbol: entry.symbol,
       market: entry.market,
       timeframe,
       success: true,
@@ -315,7 +315,7 @@ async function syncSymbol(
     };
   } catch (error) {
     return {
-      symbol: entry.code,
+      symbol: entry.symbol,
       market: entry.market,
       timeframe,
       success: false,
@@ -369,7 +369,7 @@ export async function syncWatchlist(options: SyncOptions = {}): Promise<SyncResu
       for (const entry of entries) {
         try {
           const batchResults = await crawler.browserFetchKlineDataBatch(
-            entry.code,
+            entry.symbol,
             entry.market,
             timeframesToSync,
             {
@@ -390,7 +390,7 @@ export async function syncWatchlist(options: SyncOptions = {}): Promise<SyncResu
           results.push(...entryResults);
         } catch (error) {
           // If batch fetch fails, fall back to individual fetches
-          logger.warn(`Batch fetch failed for ${entry.code}, falling back to individual fetches:`, error instanceof Error ? error.message : String(error));
+          logger.warn(`Batch fetch failed for ${entry.symbol}, falling back to individual fetches:`, error instanceof Error ? error.message : String(error));
           for (const timeframe of timeframesToSync) {
             const result = await syncSymbol(entry, { ...options, timeframe }, crawler);
             results.push(result);
@@ -417,7 +417,7 @@ export async function syncWatchlist(options: SyncOptions = {}): Promise<SyncResu
  * Auto-sync if cache is stale (for use in fetch operations)
  */
 export async function autoSyncIfStale(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe = 'daily',
   options: SyncOptions = {}
@@ -431,17 +431,17 @@ export async function autoSyncIfStale(
 
   // Check if cache is valid
   const defaultFqt = getDefaultFqt();
-  if (isCacheValid(code, market, timeframe, maxAgeValue, defaultFqt)) {
-    const cacheDateRange = getCacheDateRange(code, market, timeframe, defaultFqt);
+  if (isCacheValid(symbol, market, timeframe, maxAgeValue, defaultFqt)) {
+    const cacheDateRange = getCacheDateRange(symbol, market, timeframe, defaultFqt);
     if (cacheDateRange && cacheCoversDateRange(cacheDateRange, startDate, endDate)) {
       // Cache has all requested data
-      return getCachedData(code, market, timeframe, startDate, endDate, defaultFqt);
+      return getCachedData(symbol, market, timeframe, startDate, endDate, defaultFqt);
     }
   }
 
   // Cache is stale or missing data, sync it
   const entry: WatchlistEntry = {
-    code,
+    symbol,
     market,
   };
 
@@ -460,7 +460,7 @@ export async function autoSyncIfStale(
 
   if (result.success) {
       const defaultFqt = getDefaultFqt();
-      return getCachedData(code, market, timeframe, startDate, endDate, defaultFqt);
+      return getCachedData(symbol, market, timeframe, startDate, endDate, defaultFqt);
   }
 
   return null;

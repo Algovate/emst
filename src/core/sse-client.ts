@@ -36,7 +36,7 @@ export class SSEClient {
     if (type === SSEConnectionType.NEWS) {
       return `${type} (global news stream)`;
     }
-    return `${type} for ${this.options.code}`;
+    return `${type} for ${this.options.symbol}`;
   }
 
   /**
@@ -51,12 +51,12 @@ export class SSEClient {
       // Build URL - news type doesn't need token
       let url: string;
       if (type === SSEConnectionType.NEWS) {
-        // News SSE doesn't require token or code/market
+        // News SSE doesn't require token or symbol/market
         url = SSEUrlBuilder.buildUrl(type, '', 0, '');
       } else {
         // Other types need token
-        const utToken = await getUtToken(this.options.code, this.options.market);
-        url = SSEUrlBuilder.buildUrl(type, this.options.code, this.options.market, utToken);
+        const utToken = await getUtToken(this.options.symbol, this.options.market);
+        url = SSEUrlBuilder.buildUrl(type, this.options.symbol, this.options.market, utToken);
       }
       
       logger.debug(`Connecting to SSE: ${this.getConnectionDescription(type)}`);
@@ -170,7 +170,7 @@ export class SSEClient {
     const elapsed = Date.now() - this.lastHeartbeat;
     
     if (elapsed > timeout && this.isConnected) {
-      const description = this.options.code ? `${this.options.code}` : 'connection';
+      const description = this.options.symbol ? `${this.options.symbol}` : 'connection';
       logger.warn(`Heartbeat timeout for ${description}, reconnecting...`);
       this.isConnected = false;
       return false;
@@ -195,7 +195,7 @@ export class SSEClient {
     }
 
     this.isConnected = false;
-    const description = this.options.code ? `for ${this.options.code}` : '';
+    const description = this.options.symbol ? `for ${this.options.symbol}` : '';
     logger.debug(`SSE connection closed ${description}`);
   }
 

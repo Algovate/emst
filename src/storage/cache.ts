@@ -26,22 +26,22 @@ function ensureCacheDir(): void {
 /**
  * Get cache file path for a symbol, market, timeframe, and adjustment type
  */
-function getCacheFilePath(code: string, market: Market, timeframe: Timeframe, fqt: AdjustmentType = 1): string {
-  return join(getCacheDir(), `${code}_${market}_${timeframe}_fqt${fqt}.json`);
+function getCacheFilePath(symbol: string, market: Market, timeframe: Timeframe, fqt: AdjustmentType = 1): string {
+  return join(getCacheDir(), `${symbol}_${market}_${timeframe}_fqt${fqt}.json`);
 }
 
 /**
  * Get cached data for a symbol, market, timeframe, and adjustment type
  */
 export function getCachedData(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   startDate?: string,
   endDate?: string,
   fqt: AdjustmentType = 1
 ): KlineData[] | null {
-  const filePath = getCacheFilePath(code, market, timeframe, fqt);
+  const filePath = getCacheFilePath(symbol, market, timeframe, fqt);
   
   if (!existsSync(filePath)) {
     return null;
@@ -81,12 +81,12 @@ export function getCachedData(
  * Get cache entry (includes metadata)
  */
 export function getCacheEntry(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   fqt: AdjustmentType = 1
 ): CacheEntry | null {
-  const filePath = getCacheFilePath(code, market, timeframe, fqt);
+  const filePath = getCacheFilePath(symbol, market, timeframe, fqt);
   
   if (!existsSync(filePath)) {
     return null;
@@ -105,7 +105,7 @@ export function getCacheEntry(
  * Merges with existing cache if present, avoiding duplicates
  */
 export function setCachedData(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   newData: KlineData[],
@@ -113,13 +113,13 @@ export function setCachedData(
   fqt: AdjustmentType = 1
 ): void {
   ensureCacheDir();
-  const filePath = getCacheFilePath(code, market, timeframe, fqt);
+  const filePath = getCacheFilePath(symbol, market, timeframe, fqt);
   
   let data: KlineData[] = [];
   let existingEntry: CacheEntry | null = null;
   
   if (merge && existsSync(filePath)) {
-    existingEntry = getCacheEntry(code, market, timeframe, fqt);
+    existingEntry = getCacheEntry(symbol, market, timeframe, fqt);
     if (existingEntry) {
       data = existingEntry.data || [];
     }
@@ -151,7 +151,7 @@ export function setCachedData(
     data,
     lastSync: Date.now(),
     metadata: {
-      symbol: code,
+      symbol,
       market,
       timeframe,
       fqt,
@@ -171,14 +171,14 @@ export function setCachedData(
  * Check if cache is valid (exists and not expired)
  */
 export function isCacheValid(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   maxAge?: number,
   fqt: AdjustmentType = 1
 ): boolean {
   const defaultMaxAge = maxAge ?? getDefaultMaxAge();
-  const cacheEntry = getCacheEntry(code, market, timeframe, fqt);
+  const cacheEntry = getCacheEntry(symbol, market, timeframe, fqt);
   
   if (!cacheEntry || !cacheEntry.data || cacheEntry.data.length === 0) {
     return false;
@@ -192,12 +192,12 @@ export function isCacheValid(
  * Get date range of cached data
  */
 export function getCacheDateRange(
-  code: string,
+  symbol: string,
   market: Market,
   timeframe: Timeframe,
   fqt: AdjustmentType = 1
 ): DateRange | null {
-  const data = getCachedData(code, market, timeframe, undefined, undefined, fqt);
+  const data = getCachedData(symbol, market, timeframe, undefined, undefined, fqt);
   
   if (!data || data.length === 0) {
     return null;
@@ -215,14 +215,14 @@ export function getCacheDateRange(
  * If no parameters provided, clears all cache
  */
 export function clearCache(
-  code?: string,
+  symbol?: string,
   market?: Market,
   timeframe?: Timeframe,
   fqt?: AdjustmentType
 ): number {
   ensureCacheDir();
   
-  if (!code || market === undefined || !timeframe || fqt === undefined) {
+  if (!symbol || market === undefined || !timeframe || fqt === undefined) {
     // Clear all cache
     const cacheDir = getCacheDir();
     if (!existsSync(cacheDir)) {
@@ -250,7 +250,7 @@ export function clearCache(
     }
   } else {
     // Clear specific cache
-    const filePath = getCacheFilePath(code, market, timeframe, fqt);
+    const filePath = getCacheFilePath(symbol, market, timeframe, fqt);
     if (existsSync(filePath)) {
       try {
         unlinkSync(filePath);
@@ -268,7 +268,7 @@ export function clearCache(
 /**
  * Get cache file path (for external use if needed)
  */
-export function getCachePath(code: string, market: Market, timeframe: Timeframe, fqt: AdjustmentType = 1): string {
-  return getCacheFilePath(code, market, timeframe, fqt);
+export function getCachePath(symbol: string, market: Market, timeframe: Timeframe, fqt: AdjustmentType = 1): string {
+  return getCacheFilePath(symbol, market, timeframe, fqt);
 }
 

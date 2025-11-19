@@ -35,25 +35,25 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
   // Add symbol to watchlist
   const addCommand = watchlistCommand
     .command('add')
-    .description('Add a symbol to the watchlist (market will be auto-detected for A-share codes)')
+    .description('Add a symbol to the watchlist (market will be auto-detected for A-share symbols)')
     .alias('a')
-    .argument('<code>', 'Stock code (e.g., 688005 for A-share, 00700 for HK, AAPL for US)')
-    .option('-m, --market <market>', getMarketHelpText() + ' (optional for A-share codes)');
+    .argument('<symbol>', 'Stock symbol (e.g., 688005 for A-share, 00700 for HK, AAPL for US)')
+    .option('-m, --market <market>', getMarketHelpText() + ' (optional for A-share symbols)');
   
   // Apply logging options
   applyLoggingOptionsIfAvailable(addCommand, commonOptions);
   
-  addCommand.action(wrapCommandAction((code: string, options: { market?: string; verbose?: boolean; quiet?: boolean }) => {
+  addCommand.action(wrapCommandAction((symbol: string, options: { market?: string; verbose?: boolean; quiet?: boolean }) => {
       // Resolve market (auto-detect or validate provided, require market for watchlist add)
       const { market, marketName } = resolveMarket({
-        code,
+        symbol,
         marketOption: options.market,
         quiet: options.quiet,
         requireMarket: true, // Require market for watchlist add
       });
       
-      addToWatchlist(code, market);
-      outputProgress(`Added ${code} (${marketName}) to watchlist`, options.quiet);
+      addToWatchlist(symbol, market);
+      outputProgress(`Added ${symbol} (${marketName}) to watchlist`, options.quiet);
     }));
 
   // Remove symbol from watchlist
@@ -61,17 +61,17 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
     .command('remove')
     .description('Remove a symbol from the watchlist')
     .alias('rm')
-    .argument('<code>', 'Stock code (e.g., 688005)');
+    .argument('<symbol>', 'Stock symbol (e.g., 688005)');
   
   // Apply logging options
   applyLoggingOptionsIfAvailable(removeCommand, commonOptions);
   
-  removeCommand.action(wrapCommandAction((code: string, options: { verbose?: boolean; quiet?: boolean }) => {
-      const removed = removeFromWatchlist(code);
+  removeCommand.action(wrapCommandAction((symbol: string, options: { verbose?: boolean; quiet?: boolean }) => {
+      const removed = removeFromWatchlist(symbol);
       if (removed) {
-        outputProgress(`Removed ${code} from watchlist`, options.quiet);
+        outputProgress(`Removed ${symbol} from watchlist`, options.quiet);
       } else {
-        throw new Error(`Symbol ${code} not found in watchlist`);
+        throw new Error(`Symbol ${symbol} not found in watchlist`);
       }
     }));
 
@@ -100,7 +100,7 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
         if (format === 'json') {
           // JSON format
           const data = entries.map(entry => ({
-            code: entry.code,
+            symbol: entry.symbol,
             market: entry.market,
             marketName: getMarketName(entry.market),
             name: entry.name,
@@ -121,7 +121,7 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
             
             entries.forEach((entry, index) => {
               const marketName = getMarketName(entry.market);
-              output += `${index + 1}. ${entry.code} - ${marketName}\n`;
+              output += `${index + 1}. ${entry.symbol} - ${marketName}\n`;
               if (entry.name) {
                 output += `   Name: ${entry.name}\n`;
               }
@@ -139,13 +139,13 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
                 let timeframeHasCache = false;
                 for (let i = 0; i < fqtTypes.length; i++) {
                   const fqt = fqtTypes[i];
-                  const cacheEntry = getCacheEntry(entry.code, entry.market, tf, fqt);
+                  const cacheEntry = getCacheEntry(entry.symbol, entry.market, tf, fqt);
                   if (cacheEntry && cacheEntry.data && cacheEntry.data.length > 0) {
                     if (!timeframeHasCache) {
                       timeframeHasCache = true;
                       hasCache = true;
                     }
-                    const dateRange = getCacheDateRange(entry.code, entry.market, tf, fqt);
+                    const dateRange = getCacheDateRange(entry.symbol, entry.market, tf, fqt);
                     const lastSync = new Date(cacheEntry.lastSync).toLocaleString();
                     const rangeStr = dateRange ? ` (${dateRange.min} to ${dateRange.max})` : '';
                     const fqtLabel = fqt === 1 ? '' : ` [${fqtNames[i]}]`;
@@ -168,7 +168,7 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
               const marketName = getMarketName(entry.market);
               const name = entry.name ? ` (${entry.name})` : '';
               const addedDate = entry.addedDate ? ` - Added: ${entry.addedDate}` : '';
-              output += `${index + 1}. ${entry.code} - ${marketName}${name}${addedDate}\n`;
+              output += `${index + 1}. ${entry.symbol} - ${marketName}${name}${addedDate}\n`;
             });
           }
           
@@ -209,18 +209,18 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
       results.forEach((result) => {
         const { entry, detectedMarket, status } = result;
         const currentMarketName = getMarketName(entry.market);
-        const codeDisplay = entry.code.padEnd(8);
+        const symbolDisplay = entry.symbol.padEnd(8);
 
         if (status === 'correct') {
-          checkOutput += `${codeDisplay}: ✓ ${currentMarketName} (correct)\n`;
+          checkOutput += `${symbolDisplay}: ✓ ${currentMarketName} (correct)\n`;
           correctCount++;
         } else if (status === 'mismatch' && detectedMarket !== null) {
           const expectedMarketName = getMarketName(detectedMarket);
-          checkOutput += `${codeDisplay}: ✗ ${currentMarketName} → ${expectedMarketName} (mismatch)\n`;
+          checkOutput += `${symbolDisplay}: ✗ ${currentMarketName} → ${expectedMarketName} (mismatch)\n`;
           mismatchCount++;
         } else {
           // cannot_detect
-          checkOutput += `${codeDisplay}: ? ${currentMarketName} (cannot auto-detect)\n`;
+          checkOutput += `${symbolDisplay}: ? ${currentMarketName} (cannot auto-detect)\n`;
           cannotDetectCount++;
         }
       });
@@ -244,7 +244,7 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
       const format = validateFormat(options.format, 'text');
         if (format === 'json') {
           const data = results.map(result => ({
-            code: result.entry.code,
+            symbol: result.entry.symbol,
             market: result.entry.market,
             marketName: getMarketName(result.entry.market),
             status: result.status,
@@ -353,7 +353,7 @@ export function registerWatchlistCommands(parentCommand: Command, commonOptions?
 /**
  * Get cache information for a watchlist entry
  */
-function getCacheInfo(entry: { code: string; market: Market }): Record<string, any> {
+function getCacheInfo(entry: { symbol: string; market: Market }): Record<string, any> {
   const timeframes: readonly Timeframe[] = ['daily', 'weekly', 'monthly', '5min', '15min', '30min', '60min'] as const;
   const fqtTypes: AdjustmentType[] = [0, 1, 2];
   const fqtNames = ['none', 'forward', 'backward'];
@@ -363,9 +363,9 @@ function getCacheInfo(entry: { code: string; market: Market }): Record<string, a
     const tfCache: any[] = [];
     for (let i = 0; i < fqtTypes.length; i++) {
       const fqt = fqtTypes[i];
-      const cacheEntry = getCacheEntry(entry.code, entry.market, tf, fqt);
+      const cacheEntry = getCacheEntry(entry.symbol, entry.market, tf, fqt);
       if (cacheEntry && cacheEntry.data && cacheEntry.data.length > 0) {
-        const dateRange = getCacheDateRange(entry.code, entry.market, tf, fqt);
+        const dateRange = getCacheDateRange(entry.symbol, entry.market, tf, fqt);
         tfCache.push({
           fqt: fqtNames[i],
           records: cacheEntry.data.length,
