@@ -546,6 +546,10 @@ export class EastMoneyCrawler {
 
     const apiResponse = this.parseKlineResponse(response.data);
     
+    if (!apiResponse.data) {
+      throw new Error('No data returned from API');
+    }
+    
     return {
       symbol: apiResponse.data.code,
       name: apiResponse.data.name,

@@ -33,7 +33,7 @@ export interface KlineResponse {
     dktotal: number;
     preKPrice: number;
     klines: string[]; // Array of comma-separated values
-  };
+  } | null;
 }
 
 /**

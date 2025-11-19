@@ -203,14 +203,14 @@ export function validateMarketAndSymbol(symbol: string, marketStr?: string): Mar
   let market: Market | null = null;
   
   // Try to parse provided market
-  if (marketStr) {
+  if (marketStr !== undefined) {
     market = parseMarket(marketStr);
   }
   
   // If market not provided or invalid, try to auto-detect from symbol
-  if (!market) {
+  if (market === null) {
     market = detectMarketFromSymbol(symbol);
-    if (market) {
+    if (market !== null) {
       // Auto-detected market, validate symbol format
       if (!validateStockSymbol(symbol, market)) {
         throw new Error(getStockSymbolValidationError(symbol, market));
@@ -220,7 +220,7 @@ export function validateMarketAndSymbol(symbol: string, marketStr?: string): Mar
   }
   
   // Market was provided and is valid, or auto-detection failed
-  if (!market) {
+  if (market === null) {
     throw new Error(`Invalid market code. ${getMarketHelpText()}. Cannot auto-detect market from symbol ${symbol}.`);
   }
   
