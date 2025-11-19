@@ -38,7 +38,7 @@ export function loadWatchlist(): WatchlistEntry[] {
     const entries = JSON.parse(content) as WatchlistEntry[];
 
     // Validate entries
-    const validMarkets = [Market.Shenzhen, Market.Shanghai, Market.US, Market.HongKong];
+    const validMarkets = [Market.Shenzhen, Market.Shanghai, Market.US, Market.US_ETF, Market.HongKong];
     return entries.filter(entry =>
       entry.code &&
       typeof entry.code === 'string' &&
@@ -101,7 +101,8 @@ export function addToWatchlist(
         errorMsg += 'Hong Kong codes must be 5 digits starting with 0 (e.g., 00700)';
         break;
       case Market.US:
-        errorMsg += 'US codes must be 1-5 uppercase letters (e.g., AAPL)';
+      case Market.US_ETF:
+        errorMsg += 'US codes must be 1-5 uppercase letters (e.g., AAPL, SPY)';
         break;
       default:
         errorMsg += 'Invalid market';

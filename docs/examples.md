@@ -93,7 +93,7 @@ emst stock fetch --code 688005 --fqt 2
 
 ### 多市场支持
 
-支持 A股、港股、美股三大市场，A股自动识别市场：
+支持 A股、港股、美股、美股ETF四大市场，A股自动识别市场：
 
 ```bash
 # A股（自动检测市场）
@@ -109,6 +109,9 @@ emst stock fetch --code 00700 --market 116
 
 # 美股（需指定市场）
 emst stock fetch --code AAPL --market 105
+
+# 美股ETF（需指定市场 107）
+emst stock fetch --code SPY --market 107
 ```
 
 ## 实时行情
@@ -125,6 +128,7 @@ emst stock quote --code 688005 --format json
 # 多市场支持
 emst stock quote --code 00700 --market 116  # 港股
 emst stock quote --code AAPL --market 105   # 美股
+emst stock quote --code SPY --market 107    # 美股ETF
 ```
 
 ### 实时数据流（SSE）
@@ -196,6 +200,9 @@ emst stock watchlist add 00700 --market 116
 
 # 添加美股
 emst stock watchlist add AAPL --market 105
+
+# 添加美股ETF
+emst stock watchlist add SPY --market 107
 
 # 验证自选股
 emst stock watchlist list
@@ -379,6 +386,7 @@ emst stock watchlist add 688005              # A股（上海）
 emst stock watchlist add 000001              # A股（深圳）
 emst stock watchlist add 00700 --market 116  # 港股
 emst stock watchlist add AAPL --market 105   # 美股
+emst stock watchlist add SPY --market 107    # 美股ETF
 
 # 同步所有市场的数据
 emst stock watchlist sync
@@ -386,6 +394,7 @@ emst stock watchlist sync
 # 获取特定市场的实时行情
 emst stock quote --code 00700 --market 116
 emst stock quote --code AAPL --market 105
+emst stock quote --code SPY --market 107
 ```
 
 ## 脚本示例

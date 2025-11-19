@@ -56,6 +56,7 @@ export enum Market {
   Shenzhen = 0,  // 深圳 (A股)
   Shanghai = 1,  // 上海 (A股)
   US = 105,      // 美股
+  US_ETF = 107,  // 美股ETF (US ETFs like SPY)
   HongKong = 116, // 港股
 }
 

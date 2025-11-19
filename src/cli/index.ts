@@ -25,7 +25,7 @@ export const commonOptions: CommonOptions = {
   market: (cmd: Command) => cmd.option('-m, --market <market>', getMarketHelpText(), '1'),
   marketOptional: (cmd: Command) => cmd.option(
     '-m, --market <market>',
-    'Market code (0=Shenzhen, 1=Shanghai, 105=US, 116=HK). Auto-detected for A-share codes if not provided.'
+    'Market code (0=Shenzhen, 1=Shanghai, 105=US, 107=US ETF, 116=HK). Auto-detected for A-share codes if not provided.'
   ),
   code: (cmd: Command) => cmd.requiredOption('-c, --code <code>', 'Stock code (e.g., 688005 for A-share, 00700 for HK, AAPL for US)'),
   timeframe: (cmd: Command) => cmd.option(

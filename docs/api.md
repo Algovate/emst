@@ -441,6 +441,7 @@ interface RealtimeQuote {
 - **Market 0**: 深圳 - A股股票、指数、基金、ETF
 - **Market 1**: 上海 - A股股票、指数
 - **Market 105**: 美股
+- **Market 107**: 美股ETF (US ETFs like SPY)
 - **Market 116**: 港股
 
 ### 代码类型
@@ -459,16 +460,17 @@ interface RealtimeQuote {
 **基金/ETF（使用与股票相同的API）：**
 - 000001 (基金) - Market 0
 - 159001 (ETF) - Market 0
+- SPY (美股ETF) - Market 107
 
 ## 注意事项
 
 - API调用时所有日期格式为 YYYYMMDD
 - 缓存数据使用 YYYY-MM-DD 格式
-- 市场代码：0 = 深圳，1 = 上海，105 = 美股，116 = 港股
+- 市场代码：0 = 深圳，1 = 上海，105 = 美股，107 = 美股ETF，116 = 港股
 - 股票代码格式：
   - A股（深圳/上海）：6位数字（如 688005）
   - 港股：5位数字，以0开头（如 00700）
-  - 美股：1-5个大写字母（如 AAPL）
+  - 美股：1-5个大写字母（如 AAPL, SPY）
 - 指数和基金/ETF使用与股票相同的API和代码格式
 - 缓存存储在 `.emst/cache/` 目录
 - 自选股存储在 `.emst/watchlist.json`

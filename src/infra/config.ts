@@ -129,7 +129,7 @@ function loadConfigFromEnv(): Partial<Config> {
   // Defaults
   if (process.env.EMST_DEFAULT_MARKET) {
     const market = parseInt(process.env.EMST_DEFAULT_MARKET, 10);
-    if ([Market.Shenzhen, Market.Shanghai, Market.US, Market.HongKong].includes(market as Market)) {
+    if ([Market.Shenzhen, Market.Shanghai, Market.US, Market.US_ETF, Market.HongKong].includes(market as Market)) {
       envConfig.defaults = { ...envConfig.defaults, market: market as Market };
     }
   }

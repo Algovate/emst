@@ -22,6 +22,7 @@ npm install -g emst
 emst stock fetch --code 688005              # A股
 emst stock fetch --code 00700 --market 116  # 港股
 emst stock fetch --code AAPL --market 105   # 美股
+emst stock fetch --code SPY --market 107    # 美股ETF
 
 # 获取实时行情
 emst stock quote --code 688005

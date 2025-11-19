@@ -26,6 +26,9 @@ emst stock watchlist add 00700 --market 116
 
 # 美股（需指定市场）
 emst stock watchlist add AAPL --market 105
+
+# 美股ETF（需指定市场 107）
+emst stock watchlist add SPY --market 107
 ```
 
 ### 移除股票
@@ -199,8 +202,8 @@ emst stock watchlist sync --timeframe 60min
 
 ### 字段说明
 
-- `code`（必需）：6位股票代码（如 "688005"）
-- `market`（必需）：市场代码（0=深圳，1=上海）
+- `code`（必需）：股票代码（A股：6位数字如 "688005"，港股：5位数字如 "00700"，美股：1-5个大写字母如 "AAPL", "SPY"）
+- `market`（必需）：市场代码（0=深圳，1=上海，105=美股，107=美股ETF，116=港股）
 - `name`（可选）：股票名称（如果未提供，同步时会自动获取）
 - `addedDate`（可选）：添加到自选股的日期（YYYY-MM-DD格式）
 

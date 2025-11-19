@@ -129,15 +129,41 @@ export class EastMoneyCrawler {
   }
 
   /**
+   * Check if market is a US market (105 or 107)
+   */
+  private isUSMarket(market: Market | number): boolean {
+    const marketNum = typeof market === 'number' ? market : market as number;
+    return marketNum === Market.US || marketNum === Market.US_ETF || marketNum === 105 || marketNum === 107;
+  }
+
+  /**
+   * Get alternative US market code (107 -> 105, 105/US -> 107)
+   */
+  private getAlternativeUSMarket(market: Market | number): number {
+    const marketNum = typeof market === 'number' ? market : market as number;
+    // If current is 107 (US_ETF), try 105 (US), otherwise try 107
+    return (marketNum === 107 || marketNum === Market.US_ETF) ? 105 : 107;
+  }
+
+  /**
    * Build referer URL based on market and stock code
    */
-  private buildRefererUrl(code: string, market: Market): string {
+  private buildRefererUrl(code: string, market: Market | number): string {
+    const marketNum = typeof market === 'number' ? market : market as number;
+    // US stocks/ETFs use /us/ prefix (market codes 105 or 107)
+    if (this.isUSMarket(marketNum)) {
+      return `https://quote.eastmoney.com/us/${code}.html`;
+    }
+    // Hong Kong stocks use /hk/ prefix
+    if (marketNum === Market.HongKong) {
+      return `https://quote.eastmoney.com/hk/${code}.html`;
+    }
     // Shanghai stocks (688xxx) use /kcb/ prefix
-    if (market === Market.Shanghai && code.startsWith('688')) {
+    if (marketNum === Market.Shanghai && code.startsWith('688')) {
       return `https://quote.eastmoney.com/kcb/${code}.html`;
     }
     // Shenzhen stocks use /sz prefix
-    if (market === Market.Shenzhen) {
+    if (marketNum === Market.Shenzhen) {
       return `https://quote.eastmoney.com/sz${code}.html`;
     }
     // Default for other Shanghai stocks
@@ -330,11 +356,36 @@ export class EastMoneyCrawler {
    */
   private async browserFetchKlineData(options: CrawlerOptions): Promise<KlineData[]> {
     const { code, market = Market.Shanghai } = options;
-    const params = this.buildKlineParams(options);
-    const url = `${this.apiBaseUrl}?${params.toString()}`;
-    const refererUrl = this.buildRefererUrl(code, market);
+    
+    // Try primary market code first
+    let result = await this.browserFetchKlineDataWithMarket(code, market, options);
+    
+    // For US stocks/ETFs, if rc:100 (no data), try alternative market codes
+    if (result.length === 0 && this.isUSMarket(market)) {
+      const alternativeMarket = this.getAlternativeUSMarket(market);
+      logger.debug(`Trying alternative market code ${alternativeMarket} for US stock ${code}...`);
+      result = await this.browserFetchKlineDataWithMarket(code, alternativeMarket, options);
+      if (result.length > 0) {
+        logger.info(`Found data for ${code} using market code ${alternativeMarket}`);
+      }
+    }
+    
+    return result;
+  }
 
-    logger.info(`Fetching data using browser for ${code} (${market})...`);
+  /**
+   * Fetch K-line data using browser with a specific market code
+   */
+  private async browserFetchKlineDataWithMarket(
+    code: string,
+    market: Market | number,
+    options: CrawlerOptions
+  ): Promise<KlineData[]> {
+    const params = this.buildKlineParams({ ...options, market: market as Market });
+    const url = `${this.apiBaseUrl}?${params.toString()}`;
+    const refererUrl = this.buildRefererUrl(code, market as Market);
+
+    logger.debug(`Fetching data using browser for ${code} (${market})...`);
 
     const responseText = await this.browserFetchUrl(url, refererUrl, `K-line data for ${code}`);
 
@@ -413,6 +464,28 @@ export class EastMoneyCrawler {
       }
     }
 
+    const { code, market = Market.Shanghai } = options;
+
+    // Try primary market code first
+    let result = await this.fetchKlineDataWithMarket(options);
+    
+    // For US stocks/ETFs, if rc:100 (no data), try alternative market codes
+    if (result.length === 0 && this.isUSMarket(market)) {
+      const alternativeMarket = this.getAlternativeUSMarket(market);
+      logger.debug(`Trying alternative market code ${alternativeMarket} for US stock ${code}...`);
+      result = await this.fetchKlineDataWithMarket({ ...options, market: alternativeMarket as Market });
+      if (result.length > 0) {
+        logger.info(`Found data for ${code} using market code ${alternativeMarket}`);
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Fetch K-line data with a specific market code using axios
+   */
+  private async fetchKlineDataWithMarket(options: CrawlerOptions): Promise<KlineData[]> {
     const { code, market = Market.Shanghai } = options;
 
     // Initialize cookies first with the specific stock info

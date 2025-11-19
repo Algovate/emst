@@ -121,7 +121,8 @@ export function validateStockCode(code: string, market: Market): boolean {
       // 港股: 5 digits, usually starts with 0
       return /^0\d{4}$/.test(code);
     case Market.US:
-      // 美股: 1-5 uppercase letters (ticker symbol)
+    case Market.US_ETF:
+      // 美股/美股ETF: 1-5 uppercase letters (ticker symbol)
       return /^[A-Z]{1,5}$/.test(code);
     default:
       return false;
@@ -141,6 +142,8 @@ export function getMarketName(market: Market): string {
       return 'Hong Kong';
     case Market.US:
       return 'US';
+    case Market.US_ETF:
+      return 'US ETF';
     default:
       return 'Unknown';
   }
@@ -150,13 +153,13 @@ export function getMarketName(market: Market): string {
  * Get market code description for CLI help
  */
 export function getMarketHelpText(): string {
-  return 'Market code: 0=Shenzhen, 1=Shanghai, 105=US, 116=Hong Kong (default: 1)';
+  return 'Market code: 0=Shenzhen, 1=Shanghai, 105=US, 107=US ETF, 116=Hong Kong (default: 1)';
 }
 
 /**
  * Valid market codes
  */
-export const VALID_MARKETS = [Market.Shenzhen, Market.Shanghai, Market.US, Market.HongKong] as const;
+export const VALID_MARKETS = [Market.Shenzhen, Market.Shanghai, Market.US, Market.US_ETF, Market.HongKong] as const;
 
 /**
  * Validate and parse market code
@@ -184,7 +187,8 @@ export function getStockCodeValidationError(code: string, market: Market): strin
       errorMsg += 'Hong Kong codes must be 5 digits starting with 0 (e.g., 00700)';
       break;
     case Market.US:
-      errorMsg += 'US codes must be 1-5 uppercase letters (e.g., AAPL)';
+    case Market.US_ETF:
+      errorMsg += 'US codes must be 1-5 uppercase letters (e.g., AAPL, SPY)';
       break;
     default:
       errorMsg += 'Invalid market';
