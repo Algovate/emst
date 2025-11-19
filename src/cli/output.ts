@@ -11,6 +11,35 @@ export interface OutputOptions {
 }
 
 /**
+ * Safely write to stdout, handling EPIPE errors gracefully
+ * EPIPE occurs when the output is piped to a command that closes early (e.g., head)
+ */
+function safeWriteStdout(data: string): void {
+  try {
+    process.stdout.write(data);
+  } catch (error: any) {
+    // Ignore EPIPE errors (broken pipe) - this happens when piping to commands like head
+    if (error.code !== 'EPIPE') {
+      throw error;
+    }
+    // Exit gracefully on EPIPE
+    process.exit(0);
+  }
+}
+
+// Handle stdout error events (e.g., EPIPE from broken pipes)
+// This prevents unhandled error events when piping to commands like head
+if (!process.stdout.listenerCount('error')) {
+  process.stdout.on('error', (error: NodeJS.ErrnoException) => {
+    // Ignore EPIPE errors - this is expected when piping to commands that close early
+    if (error.code === 'EPIPE') {
+      process.exit(0);
+    }
+    // For other errors, let Node.js handle them (don't re-emit to avoid loops)
+  });
+}
+
+/**
  * Output data to stdout (separated from progress logs)
  * This function outputs actual data, not progress information
  */
@@ -53,7 +82,7 @@ export function outputData(data: any, format: OutputFormat = 'json', options: Ou
   }
 
   // Output to stdout (not stderr)
-  process.stdout.write(output + '\n');
+  safeWriteStdout(output + '\n');
 }
 
 /**
@@ -70,7 +99,7 @@ export function outputProgress(message: string, quiet?: boolean): void {
  */
 export function outputRaw(data: string, quiet?: boolean): void {
   if (!quiet) {
-    process.stdout.write(data);
+    safeWriteStdout(data);
   }
 }
 
@@ -106,7 +135,7 @@ export function formatAndOutputData(
       break;
   }
 
-  process.stdout.write(output + '\n');
+  safeWriteStdout(output + '\n');
 }
 
 /**
