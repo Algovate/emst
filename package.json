@@ -15,7 +15,9 @@
     }
   },
   "scripts": {
-    "build": "webpack",
+    "build": "npm run build:api && npm run build:cli",
+    "build:api": "tsc",
+    "build:cli": "webpack --config webpack.config.js",
     "build:tsc": "tsc",
     "start": "node dist/cli.js",
     "dev": "tsx src/cli/index.ts"

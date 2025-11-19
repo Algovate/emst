@@ -9,13 +9,14 @@ export default {
   mode: 'production',
   entry: {
     cli: './src/cli/index.ts',
-    index: './src/index.ts',
+    // Note: index.ts is compiled separately using TypeScript compiler
+    // to ensure proper ES module exports (see build:api script)
   },
   target: 'node18',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: '[name].js',
-    clean: true,
+    clean: false, // Don't clean dist, preserve TypeScript-compiled files
     module: true,
     chunkFormat: 'module',
   },
