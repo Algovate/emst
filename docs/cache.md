@@ -16,7 +16,7 @@ emst 使用本地缓存系统存储 K线数据，减少 API 调用并提升性�
   └── ...
 ```
 
-**文件命名格式**：`{code}_{market}_{timeframe}_fqt{fqt}.json`
+**文件命名格式**：`{symbol}_{market}_{timeframe}_fqt{fqt}.json`
 
 **复权类型（fqt）**：
 - `fqt0`: 不复权
@@ -94,10 +94,10 @@ emst 使用本地缓存系统存储 K线数据，减少 API 调用并提升性�
 
 ```bash
 # 自动使用缓存（如果有效）
-emst stock fetch --code 688005
+emst stock fetch --symbol 688005
 
 # 绕过缓存，强制获取新数据
-emst stock fetch --code 688005 --no-cache
+emst stock fetch --symbol 688005 --no-cache
 ```
 
 ### 获取流程
@@ -199,7 +199,7 @@ emst stock watchlist sync --force
 
 ```bash
 # 删除特定缓存文件（需要指定复权类型）
-rm .emst/cache/{code}_{market}_{timeframe}_fqt{fqt}.json
+rm .emst/cache/{symbol}_{market}_{timeframe}_fqt{fqt}.json
 # 例如：
 rm .emst/cache/688005_1_daily_fqt1.json
 

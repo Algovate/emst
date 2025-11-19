@@ -65,14 +65,14 @@ Watchlist (3 symbols):
 ```json
 [
   {
-    "code": "688005",
+    "symbol": "688005",
     "market": 1,
     "marketName": "Shanghai",
     "name": "股票名称",
     "addedDate": "2024-01-01"
   },
   {
-    "code": "000001",
+    "symbol": "000001",
     "market": 0,
     "marketName": "Shenzhen",
     "name": "另一只股票",
@@ -186,13 +186,13 @@ emst stock watchlist sync --timeframe 60min
 ```json
 [
   {
-    "code": "688005",
+    "symbol": "688005",
     "market": 1,
     "name": "股票名称",
     "addedDate": "2024-01-01"
   },
   {
-    "code": "000001",
+    "symbol": "000001",
     "market": 0,
     "name": "另一只股票",
     "addedDate": "2024-01-02"
@@ -202,7 +202,7 @@ emst stock watchlist sync --timeframe 60min
 
 ### 字段说明
 
-- `code`（必需）：股票代码（A股：6位数字如 "688005"，港股：5位数字如 "00700"，美股：1-5个大写字母如 "AAPL", "SPY"）
+- `symbol`（必需）：股票代码（A股：6位数字如 "688005"，港股：5位数字如 "00700"，美股：1-5个大写字母如 "AAPL", "SPY"）
 - `market`（必需）：市场代码（0=深圳，1=上海，105=美股，107=美股ETF，116=港股）
 - `name`（可选）：股票名称（如果未提供，同步时会自动获取）
 - `addedDate`（可选）：添加到自选股的日期（YYYY-MM-DD格式）

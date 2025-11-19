@@ -75,7 +75,7 @@ const crawler = new EastMoneyCrawler();
 
 ```typescript
 const data = await crawler.fetchKlineData({
-  code: '688005',
+  symbol: '688005',
   market: Market.Shanghai,
   timeframe: 'daily',
   startDate: '20240101',
@@ -85,18 +85,18 @@ const data = await crawler.fetchKlineData({
 });
 ```
 
-#### getStockInfo(code: string, market: Market): Promise<StockInfo>
+#### getStockInfo(symbol: string, market: Market): Promise<StockInfo>
 
 获取股票基本信息（名称、市场等）。
 
 ```typescript
 const info = await crawler.getStockInfo('688005', Market.Shanghai);
-// 返回: { code: '688005', name: '股票名称', market: 1 }
+// 返回: { symbol: '688005', name: '股票名称', market: 1 }
 ```
 
 ## 自选股 API
 
-### addToWatchlist(code: string, market: Market, name?: string): void
+### addToWatchlist(symbol: string, market: Market, name?: string): void
 
 添加股票到自选股。
 
@@ -104,7 +104,7 @@ const info = await crawler.getStockInfo('688005', Market.Shanghai);
 addToWatchlist('688005', Market.Shanghai, '股票名称');
 ```
 
-### removeFromWatchlist(code: string): boolean
+### removeFromWatchlist(symbol: string): boolean
 
 从自选股中移除股票。如果移除成功返回 `true`，未找到返回 `false`。
 
@@ -119,11 +119,11 @@ const removed = removeFromWatchlist('688005');
 ```typescript
 const entries = getWatchlist();
 entries.forEach(entry => {
-  console.log(`${entry.code} - ${entry.market}`);
+  console.log(`${entry.symbol} - ${entry.market}`);
 });
 ```
 
-### getWatchlistEntry(code: string): WatchlistEntry | undefined
+### getWatchlistEntry(symbol: string): WatchlistEntry | undefined
 
 获取特定的自选股条目。
 
@@ -134,7 +134,7 @@ if (entry) {
 }
 ```
 
-### updateWatchlistEntry(code: string, updates: Partial<WatchlistEntry>): boolean
+### updateWatchlistEntry(symbol: string, updates: Partial<WatchlistEntry>): boolean
 
 更新自选股条目。如果更新成功返回 `true`，未找到返回 `false`。
 
@@ -144,7 +144,7 @@ updateWatchlistEntry('688005', { name: '新名称' });
 
 ## 缓存 API
 
-### getCachedData(code: string, market: Market, timeframe: Timeframe, startDate?: string, endDate?: string, fqt?: AdjustmentType): KlineData[] | null
+### getCachedData(symbol: string, market: Market, timeframe: Timeframe, startDate?: string, endDate?: string, fqt?: AdjustmentType): KlineData[] | null
 
 获取股票的缓存数据。如果缓存不存在返回 `null`。`fqt` 参数指定复权类型（默认：1，前复权）。
 
@@ -155,7 +155,7 @@ if (cached) {
 }
 ```
 
-### setCachedData(code: string, market: Market, timeframe: Timeframe, data: KlineData[], merge?: boolean, fqt?: AdjustmentType): void
+### setCachedData(symbol: string, market: Market, timeframe: Timeframe, data: KlineData[], merge?: boolean, fqt?: AdjustmentType): void
 
 保存数据到缓存。如果 `merge` 为 `true`，则与现有缓存合并。`fqt` 参数指定复权类型（默认：1，前复权）。
 
@@ -163,7 +163,7 @@ if (cached) {
 setCachedData('688005', Market.Shanghai, 'daily', data, true, 1);
 ```
 
-### isCacheValid(code: string, market: Market, timeframe: Timeframe, maxAge?: number, fqt?: AdjustmentType): boolean
+### isCacheValid(symbol: string, market: Market, timeframe: Timeframe, maxAge?: number, fqt?: AdjustmentType): boolean
 
 检查缓存是否有效。`maxAge` 以毫秒为单位（默认：24小时）。`fqt` 参数指定复权类型（默认：1，前复权）。
 
@@ -171,7 +171,7 @@ setCachedData('688005', Market.Shanghai, 'daily', data, true, 1);
 const valid = isCacheValid('688005', Market.Shanghai, 'daily', 24 * 60 * 60 * 1000, 1);
 ```
 
-### getCacheDateRange(code: string, market: Market, timeframe: Timeframe, fqt?: AdjustmentType): DateRange | null
+### getCacheDateRange(symbol: string, market: Market, timeframe: Timeframe, fqt?: AdjustmentType): DateRange | null
 
 获取缓存数据的日期范围。如果缓存不存在返回 `null`。`fqt` 参数指定复权类型（默认：1，前复权）。
 
@@ -182,7 +182,7 @@ if (range) {
 }
 ```
 
-### clearCache(code?: string, market?: Market, timeframe?: Timeframe, fqt?: AdjustmentType): number
+### clearCache(symbol?: string, market?: Market, timeframe?: Timeframe, fqt?: AdjustmentType): number
 
 清除缓存。如果不提供参数，则清除所有缓存。`fqt` 参数指定复权类型（可选）。返回删除的文件数量。
 
@@ -224,7 +224,7 @@ results.forEach(result => {
 
 ```typescript
 interface CrawlerOptions {
-  code: string;
+  symbol: string;
   market?: Market;
   timeframe?: Timeframe;
   startDate?: string; // YYYYMMDD
@@ -247,7 +247,7 @@ type AdjustmentType = 0 | 1 | 2;
 
 ```typescript
 interface WatchlistEntry {
-  code: string;
+  symbol: string;
   market: Market;
   name?: string;
   addedDate?: string; // YYYY-MM-DD
@@ -328,7 +328,7 @@ if (data) {
 
 ```typescript
 try {
-  const data = await crawler.fetchKlineData({ code: '688005', market: Market.Shanghai });
+  const data = await crawler.fetchKlineData({ symbol: '688005', market: Market.Shanghai });
 } catch (error) {
   console.error('获取失败:', error.message);
 }
@@ -336,7 +336,7 @@ try {
 
 ## 实时行情 API
 
-#### getRealtimeQuote(code: string, market: Market): Promise<RealtimeQuote>
+#### getRealtimeQuote(symbol: string, market: Market): Promise<RealtimeQuote>
 
 获取股票的实时行情快照。
 
@@ -416,21 +416,21 @@ enum FastNewsCategory {
 
 ```typescript
 interface RealtimeQuote {
-  code: string;              // 股票代码
-  name: string;              // 股票名称
-  market: number;            // 市场代码
-  latestPrice: number;       // 最新价
-  open: number;              // 今开
-  previousClose: number;     // 昨收
-  high: number;              // 最高
-  low: number;               // 最低
-  volume: number;            // 成交量
-  amount: number;            // 成交额
-  changePercent?: number;    // 涨跌幅 (%)
-  changeAmount?: number;     // 涨跌额
-  totalMarketValue?: number; // 总市值
+  symbol: string;              // 股票代码
+  name: string;                // 股票名称
+  market: number;              // 市场代码
+  latestPrice: number;         // 最新价
+  open: number;                // 今开
+  previousClose: number;       // 昨收
+  high: number;                // 最高
+  low: number;                 // 最低
+  volume: number;              // 成交量
+  amount: number;              // 成交额
+  changePercent?: number;      // 涨跌幅 (%)
+  changeAmount?: number;       // 涨跌额
+  totalMarketValue?: number;   // 总市值
   circulatingMarketValue?: number; // 流通市值
-  timestamp?: number;        // 数据获取时间戳
+  timestamp?: number;          // 数据获取时间戳
 }
 ```
 
@@ -439,7 +439,7 @@ interface RealtimeQuote {
 ### 市场
 
 - **Market 0**: 深圳 - A股股票、指数、基金、ETF
-- **Market 1**: 上海 - A股股票、指数
+- **Market 1**: 上海 - A股股票、指数、科创板
 - **Market 105**: 美股
 - **Market 107**: 美股ETF (US ETFs like SPY)
 - **Market 116**: 港股

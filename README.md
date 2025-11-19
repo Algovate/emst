@@ -19,17 +19,17 @@ npm install -g emst
 
 ```bash
 # 多市场股票数据（A股自动检测，港股/美股需指定 --market）
-emst stock fetch --code 688005              # A股
-emst stock fetch --code 00700 --market 116  # 港股
-emst stock fetch --code AAPL --market 105   # 美股
-emst stock fetch --code SPY --market 107    # 美股ETF
+emst stock fetch --symbol 688005              # A股
+emst stock fetch --symbol 00700 --market 116  # 港股
+emst stock fetch --symbol AAPL --market 105   # 美股
+emst stock fetch --symbol SPY --market 107    # 美股ETF
 
 # 获取实时行情
-emst stock quote --code 688005
+emst stock quote --symbol 688005
 
 # 实时数据流（SSE）- 实时推送行情、分时走势、成交明细
-emst stock stream --code 688005
-emst stock stream --code 688005 --types quote,trend,detail
+emst stock stream --symbol 688005
+emst stock stream --symbol 688005 --types quote,trend,detail
 
 # 快讯新闻
 emst news list                              # 获取快讯列表
@@ -92,17 +92,17 @@ npm install && npm run build
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
-| `stock fetch` | 获取K线数据 | `emst stock fetch --code 688005` |
-| `stock quote` | 获取实时行情 | `emst stock quote --code 688005` |
-| `stock stream` | 实时数据流（SSE） | `emst stock stream --code 688005` |
+| `stock fetch` | 获取K线数据 | `emst stock fetch --symbol 688005` |
+| `stock quote` | 获取实时行情 | `emst stock quote --symbol 688005` |
+| `stock stream` | 实时数据流（SSE） | `emst stock stream --symbol 688005` |
 | `news list` | 获取快讯列表 | `emst news list` |
 | `news stream` | 实时新闻流 | `emst news stream` |
 | `watchlist` | 自选股管理 | `emst stock watchlist add 688005` |
 
 ### 常用参数
 
-- `--code <code>`: 股票代码（必需）
-- `--market <market>`: 市场代码（0=深圳，1=上海，105=美股，116=港股），A股自动检测
+- `-s, --symbol <symbol>`: 股票代码（必需）
+- `--market <market>`: 市场代码（0=深圳，1=上海，105=美股，107=美股ETF，116=港股），A股自动检测
 - `--timeframe <timeframe>`: 时间周期（daily/weekly/monthly/5min/15min/30min/60min）
 - `--start/--end <date>`: 日期范围（YYYYMMDD）
 - `--output <path>`: 输出文件（.csv 自动识别为 CSV 格式）
@@ -141,7 +141,7 @@ const crawler = new EastMoneyCrawler();
 
 // 获取股票数据
 const data = await crawler.fetchKlineData({
-  code: '688005',
+  symbol: '688005',
   market: Market.Shanghai,
   timeframe: 'daily'
 });
