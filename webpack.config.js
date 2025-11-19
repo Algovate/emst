@@ -7,11 +7,14 @@ const __dirname = path.dirname(__filename);
 
 export default {
   mode: 'production',
-  entry: './src/cli/index.ts',
+  entry: {
+    cli: './src/cli/index.ts',
+    index: './src/index.ts',
+  },
   target: 'node18',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'index.js',
+    filename: '[name].js',
     clean: true,
     module: true,
     chunkFormat: 'module',
@@ -35,9 +38,11 @@ export default {
     },
   },
   plugins: [
+    // Only add shebang to CLI entry
     new webpack.BannerPlugin({
       banner: '#!/usr/bin/env node',
       raw: true,
+      include: /cli\.js$/,
     }),
   ],
   externals: ({ request }, callback) => {

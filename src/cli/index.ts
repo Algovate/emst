@@ -2,6 +2,8 @@
 
 // Initialize process-level setup (must be done before other imports)
 import { suppressKnownDeprecationWarnings } from '../utils/process-setup.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
 suppressKnownDeprecationWarnings();
 
 import { Command } from 'commander';
@@ -76,5 +78,29 @@ export function applyLoggingOptions(options: { verbose?: boolean; quiet?: boolea
 registerStockCommands(program, commonOptions);
 registerNewsCommand(program, commonOptions);
 
-// Parse command line arguments
-program.parse();
+// Only parse command line arguments if this file is being executed directly
+// This prevents CLI code from running when the module is imported as a library
+function isMainModule(): boolean {
+  // Check if this file is being executed directly (not imported)
+  if (typeof process !== 'undefined' && process.argv && process.argv.length > 1) {
+    const scriptFile = process.argv[1];
+    const currentFile = fileURLToPath(import.meta.url);
+    
+    // Check if the script file matches the current file (for direct execution)
+    // or if it ends with cli.js (for webpack bundled CLI)
+    if (scriptFile) {
+      // Normalize paths for comparison
+      const normalizedScript = path.resolve(scriptFile);
+      const normalizedCurrent = path.resolve(currentFile);
+      
+      if (normalizedScript === normalizedCurrent || scriptFile.endsWith('cli.js')) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+if (isMainModule()) {
+  program.parse();
+}

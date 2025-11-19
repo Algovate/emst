@@ -4,10 +4,20 @@
   "description": "A TypeScript crawler for fetching stock data from East Money",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "emst": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "webpack",
     "build:tsc": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/cli.js",
     "dev": "tsx src/cli/index.ts"
   },
   "keywords": [
