@@ -5,6 +5,16 @@
 export const SAMPLE_LIMIT = '460';
 export const DEFAULT_END_DATE = '20500101';
 
+export const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36';
+
+export const BROWSER_CONFIG = {
+  VIEWPORT: {
+    width: 1920,
+    height: 1080,
+  },
+  LOCALE: 'en-US,en;q=0.9',
+} as const;
+
 export const KLINE_FIELDS = {
   REQUEST: 'f1,f2,f3,f4,f5,f6',
   RESPONSE: 'f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61',

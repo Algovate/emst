@@ -2,6 +2,7 @@ import puppeteer, { Browser, Page } from 'puppeteer';
 import { addExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { logger } from '../infra/logger.js';
+import { USER_AGENT, BROWSER_CONFIG } from '../infra/constants.js';
 
 /**
  * Singleton browser manager for Puppeteer
@@ -13,7 +14,7 @@ class BrowserManager {
   private isInitializing: boolean = false;
   private initPromise: Promise<Browser> | null = null;
 
-  private constructor() {}
+  private constructor() { }
 
   /**
    * Get the singleton instance
@@ -45,7 +46,7 @@ class BrowserManager {
         puppeteerExtra.use(StealthPlugin());
 
         logger.info('Launching browser with stealth plugin...');
-        
+
         this.browser = await puppeteerExtra.launch({
           headless: true,
           args: [
@@ -57,7 +58,7 @@ class BrowserManager {
             '--no-zygote',
             '--disable-gpu',
             // Set a realistic window size
-            '--window-size=1920,1080',
+            `--window-size=${BROWSER_CONFIG.VIEWPORT.width},${BROWSER_CONFIG.VIEWPORT.height}`,
           ],
         });
 
@@ -97,19 +98,14 @@ class BrowserManager {
     const page = await browser.newPage();
 
     // Set viewport to realistic size
-    await page.setViewport({
-      width: 1920,
-      height: 1080,
-    });
+    await page.setViewport(BROWSER_CONFIG.VIEWPORT);
 
     // Set realistic user agent (macOS Chrome)
-    await page.setUserAgent(
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
-    );
+    await page.setUserAgent(USER_AGENT);
 
     // Set extra HTTP headers
     await page.setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Language': BROWSER_CONFIG.LOCALE,
     });
 
     return page;

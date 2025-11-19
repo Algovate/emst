@@ -8,7 +8,7 @@ import {
   SSEQuoteData,
 } from '../infra/types.js';
 import { SSEClient } from './sse-client.js';
-import { SSEMessageHandler } from './sse-message-handler.js';
+import { SSEMessageHandler, ParsedSSEData } from './sse-message-handler.js';
 import { logger } from '../infra/logger.js';
 import { SSE_CONSTANTS } from '../infra/sse-constants.js';
 import { hasField, calculatePriceChange } from '../utils/utils.js';
@@ -18,7 +18,7 @@ import { hasField, calculatePriceChange } from '../utils/utils.js';
  */
 export class SSEStreamManager {
   private clients: Map<string, SSEClient> = new Map();
-  private latestData: Map<string, Map<SSEConnectionType, any>> = new Map();
+  private latestData: Map<string, Map<SSEConnectionType, ParsedSSEData>> = new Map();
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private isRunning = false;
 
@@ -41,7 +41,7 @@ export class SSEStreamManager {
         }
 
         const parsedData = SSEMessageHandler.parseMessage(rawData, type, options);
-        
+
         if (parsedData) {
           // For quote data, merge with cached data if available
           if (type === SSEConnectionType.QUOTE) {
@@ -85,7 +85,7 @@ export class SSEStreamManager {
     // Create and connect clients for each type
     for (const type of types) {
       const clientKey = `${key}:${type}`;
-      
+
       if (this.clients.has(clientKey)) {
         logger.warn(`Client already exists for ${clientKey}, skipping`);
         continue;
@@ -150,19 +150,19 @@ export class SSEStreamManager {
   /**
    * Get latest cached data for a stock
    */
-  getLatestData(symbol: string, market: Market, type: SSEConnectionType): any {
+  getLatestData(symbol: string, market: Market, type: SSEConnectionType): ParsedSSEData | undefined {
     const key = this.getStreamKey(symbol, market);
     const stockData = this.latestData.get(key);
     if (!stockData) {
-      return null;
+      return undefined;
     }
-    return stockData.get(type) || null;
+    return stockData.get(type);
   }
 
   /**
    * Get all latest data for a stock
    */
-  getAllLatestData(symbol: string, market: Market): Map<SSEConnectionType, any> {
+  getAllLatestData(symbol: string, market: Market): Map<SSEConnectionType, ParsedSSEData> {
     const key = this.getStreamKey(symbol, market);
     return this.latestData.get(key) || new Map();
   }
@@ -172,7 +172,7 @@ export class SSEStreamManager {
    */
   isStreamActive(symbol: string, market: Market, type?: SSEConnectionType): boolean {
     const key = this.getStreamKey(symbol, market);
-    
+
     if (type) {
       const clientKey = `${key}:${type}`;
       const client = this.clients.get(clientKey);
@@ -204,126 +204,73 @@ export class SSEStreamManager {
   private mergeQuoteData(cached: SSEQuoteData, newData: SSEQuoteData): SSEQuoteData {
     const newRawData = newData.rawData || {};
     const cachedRawData = cached.rawData || {};
-    
+
     // Start with cached data as base
     const merged: SSEQuoteData = { ...cached };
-    
+
     // Merge rawData objects
     merged.rawData = { ...cachedRawData, ...newRawData };
-    
-    // Only update fields that exist in the new data's rawData
-    if (hasField('f57', newRawData) || hasField('f43', newRawData) || hasField('f60', newRawData) || hasField('f301', newRawData)) {
-      merged.symbol = newData.symbol;
-      merged.latestPrice = newData.latestPrice;
+
+    // Field mapping configuration
+    const FIELD_MAPPINGS: Record<string, keyof SSEQuoteData | (keyof SSEQuoteData)[]> = {
+      f57: 'symbol',
+      f43: 'latestPrice',
+      f60: 'latestPrice',
+      f301: 'latestPrice',
+      f58: 'name',
+      f107: ['market', 'turnoverRate'],
+      f44: 'open',
+      f45: 'previousClose',
+      f46: ['high', 'low'],
+      f47: 'volume',
+      f48: 'amount',
+      f51: 'buy1Price',
+      f52: 'sell1Price',
+      f161: 'buy1Volume',
+      f162: 'buy2Volume',
+      f163: 'buy3Volume',
+      f164: 'buy4Volume',
+      f167: 'sell1Volume',
+      f168: 'sell2Volume',
+      f169: 'sell3Volume',
+      f170: 'sell4Volume',
+      f84: 'totalMarketValue',
+      f116: 'totalMarketValue',
+      f85: 'circulatingMarketValue',
+      f117: 'circulatingMarketValue',
+      f92: 'volumeRatio',
+      f111: 'peRatio',
+    };
+
+    // Update fields based on mapping
+    for (const [field, target] of Object.entries(FIELD_MAPPINGS)) {
+      if (hasField(field, newRawData)) {
+        const targets = Array.isArray(target) ? target : [target];
+        for (const t of targets) {
+          // @ts-ignore - dynamic assignment
+          merged[t] = newData[t];
+        }
+      }
     }
-    
-    if (hasField('f58', newRawData)) {
-      merged.name = newData.name;
-    }
-    
-    if (hasField('f107', newRawData)) {
-      merged.market = newData.market;
-    }
-    
-    if (hasField('f44', newRawData)) {
-      merged.open = newData.open;
-    }
-    
-    if (hasField('f45', newRawData)) {
-      merged.previousClose = newData.previousClose;
-    }
-    
-    if (hasField('f46', newRawData)) {
-      merged.high = newData.high;
-      merged.low = newData.low;
-    }
-    
-    if (hasField('f47', newRawData)) {
-      merged.volume = newData.volume;
-    }
-    
-    if (hasField('f48', newRawData)) {
-      merged.amount = newData.amount;
-    }
-    
-    if (hasField('f51', newRawData)) {
-      merged.buy1Price = newData.buy1Price;
-    }
-    
-    if (hasField('f52', newRawData)) {
-      merged.sell1Price = newData.sell1Price;
-    }
-    
-    if (hasField('f161', newRawData)) {
-      merged.buy1Volume = newData.buy1Volume;
-    }
-    
-    if (hasField('f162', newRawData)) {
-      merged.buy2Volume = newData.buy2Volume;
-    }
-    
-    if (hasField('f163', newRawData)) {
-      merged.buy3Volume = newData.buy3Volume;
-    }
-    
-    if (hasField('f164', newRawData)) {
-      merged.buy4Volume = newData.buy4Volume;
-    }
-    
-    if (hasField('f167', newRawData)) {
-      merged.sell1Volume = newData.sell1Volume;
-    }
-    
-    if (hasField('f168', newRawData)) {
-      merged.sell2Volume = newData.sell2Volume;
-    }
-    
-    if (hasField('f169', newRawData)) {
-      merged.sell3Volume = newData.sell3Volume;
-    }
-    
-    if (hasField('f170', newRawData)) {
-      merged.sell4Volume = newData.sell4Volume;
-    }
-    
-    if (hasField('f84', newRawData) || hasField('f116', newRawData)) {
-      merged.totalMarketValue = newData.totalMarketValue;
-    }
-    
-    if (hasField('f85', newRawData) || hasField('f117', newRawData)) {
-      merged.circulatingMarketValue = newData.circulatingMarketValue;
-    }
-    
-    if (hasField('f92', newRawData)) {
-      merged.volumeRatio = newData.volumeRatio;
-    }
-    
-    if (hasField('f107', newRawData)) {
-      merged.turnoverRate = newData.turnoverRate;
-    }
-    
-    if (hasField('f111', newRawData)) {
-      merged.peRatio = newData.peRatio;
-    }
-    
+
     // Always update timestamp and svr
     merged.timestamp = newData.timestamp;
     merged.svr = newData.svr;
-    
+
     // Recalculate changeAmount and changePercent if we have both latestPrice and previousClose
     if (merged.latestPrice !== undefined && merged.previousClose !== undefined) {
       const { changeAmount, changePercent } = calculatePriceChange(merged.latestPrice, merged.previousClose);
       merged.changeAmount = changeAmount;
       merged.changePercent = changePercent;
     }
-    
+
     return merged;
   }
 
   /**
    * Cache data
    */
-  private cacheData(key: string, type: SSEConnectionType, data: any): void {
+  private cacheData(key: string, type: SSEConnectionType, data: ParsedSSEData): void {
     if (!this.latestData.has(key)) {
       this.latestData.set(key, new Map());
     }

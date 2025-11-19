@@ -198,7 +198,7 @@ export interface RealtimeQuoteResponse {
     f137?: number; // 总市值
     f170?: number; // 流通市值
     f301?: number; // 最新价（另一种格式）
-    [key: string]: any;
+    [key: string]: number | string | undefined; // Restrict to primitive types
   };
 }
 
@@ -218,7 +218,7 @@ export enum SSEConnectionType {
 export interface SSEQuoteData extends RealtimeQuote {
   svr?: number;           // Server ID
   rawData?: {             // Raw field data
-    [key: string]: any;
+    [key: string]: number | string | undefined;
   };
   buy1Price?: number;     // 买一价 (f51)
   sell1Price?: number;    // 卖一价 (f52)

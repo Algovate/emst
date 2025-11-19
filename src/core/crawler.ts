@@ -21,7 +21,7 @@ import { buildSecid, parseJSONPResponse, parseKlineRecord, buildRefererUrl, isUS
 import { getConfig } from '../infra/config.js';
 import { logger } from '../infra/logger.js';
 import { parseKlineResponseData, parseKlineResponseObject } from './response-parser.js';
-import { SAMPLE_LIMIT, DEFAULT_END_DATE, KLINE_FIELDS, REALTIME_FIELDS, ERROR_MESSAGES } from '../infra/constants.js';
+import { SAMPLE_LIMIT, DEFAULT_END_DATE, KLINE_FIELDS, REALTIME_FIELDS, ERROR_MESSAGES, USER_AGENT } from '../infra/constants.js';
 import { SSEStreamManager } from './sse-stream-manager.js';
 import { FastNewsClient, FastNewsOptions } from './fast-news-client.js';
 import { FastNewsCategory, FastNewsListResponse } from '../infra/types.js';
@@ -44,14 +44,14 @@ export class EastMoneyCrawler {
   constructor() {
     this.apiBaseUrl = this.config.api?.baseUrl || 'https://push2his.eastmoney.com/api/qt/stock/kline/get';
     this.realtimeApiUrl = this.config.api?.realtimeUrl || 'https://push2.eastmoney.com/api/qt/stock/get';
-    
+
     this.cookieJar = new CookieJar();
     const timeout = this.config.api?.timeout || 60000;
     const client = wrapper(axios.create({
       timeout,
       proxy: false, // Disable proxy detection to avoid url.parse() deprecation warning from proxy-from-env
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+        'User-Agent': USER_AGENT,
         'Referer': 'https://quote.eastmoney.com/',
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
@@ -67,7 +67,7 @@ export class EastMoneyCrawler {
       withCredentials: true,
     }));
     this.httpClient = client;
-    
+
     this.useBrowser = this.config.browser?.enabled || false;
     if (this.useBrowser) {
       logger.info('Browser mode enabled - will use Puppeteer for requests');
@@ -87,7 +87,7 @@ export class EastMoneyCrawler {
       // Generate essential tracking cookies that the API expects
       const timestamp = Date.now();
       const randomId = this.generateRandomId();
-      
+
       // Set essential cookies manually
       const domain = '.eastmoney.com';
       const cookies = [
@@ -110,7 +110,7 @@ export class EastMoneyCrawler {
       // Check if cookies were set
       const cookieString = await this.cookieJar.getCookieString('https://push2his.eastmoney.com');
       logger.debug('Cookies initialized:', cookieString ? 'Yes' : 'No');
-      
+
       this.cookiesInitialized = true;
     } catch (error) {
       // Log but don't fail - we'll try the API request anyway
@@ -123,7 +123,7 @@ export class EastMoneyCrawler {
    * Generate a random ID for tracking cookies
    */
   private generateRandomId(): string {
-    return Array.from({ length: 32 }, () => 
+    return Array.from({ length: 32 }, () =>
       Math.floor(Math.random() * 16).toString(16)
     ).join('');
   }
@@ -168,7 +168,7 @@ export class EastMoneyCrawler {
     operation: string
   ): Promise<string> {
     // Navigate to API URL
-      logger.debug(`Fetching ${operation}...`);
+    logger.debug(`Fetching ${operation}...`);
     const apiTimeout = this.config.browser?.apiTimeoutMs || 30000;
     const response: HTTPResponse | null = await page.goto(apiUrl, {
       waitUntil: 'domcontentloaded',
@@ -266,19 +266,19 @@ export class EastMoneyCrawler {
       lmt: limit.toString(),
       _: Date.now().toString(),
     });
-    
+
     // Only add token if configured (it's optional)
     if (this.config.api?.token) {
       params.set('ut', this.config.api.token);
     }
-    
+
     return params;
   }
 
   /**
    * Parse quote data from API response
    */
-  private parseQuoteData(quoteData: any, symbol: string, market: Market): RealtimeQuote {
+  private parseQuoteData(quoteData: RealtimeQuoteResponse['data'], symbol: string, market: Market): RealtimeQuote {
     const latestPrice = convertPriceFromCents(quoteData.f43 ?? quoteData.f60 ?? quoteData.f301);
     const open = convertPriceFromCents(quoteData.f44);
     const previousClose = convertPriceFromCents(quoteData.f45);
@@ -314,7 +314,7 @@ export class EastMoneyCrawler {
    */
   private async browserFetchKlineData(options: CrawlerOptions): Promise<KlineData[]> {
     const { symbol, market = Market.Shanghai } = options;
-    
+
     // Use user-provided market code directly - no detection, no fallback
     return await this.browserFetchKlineDataWithMarket(symbol, market, options);
   }
@@ -437,27 +437,27 @@ export class EastMoneyCrawler {
       });
 
       const klineResponse = this.parseKlineResponse(response.data);
-      
+
       // Use unified parser to handle response validation
       return parseKlineResponseObject(klineResponse, symbol);
     } catch (error) {
       // Auto-fallback to browser mode if TLS fingerprinting detected
       if (axios.isAxiosError(error)) {
-        const isTLSFingerprintingError = error.code === 'ECONNRESET' || 
-                                        error.message.includes('socket hang up') ||
-                                        error.code === 'ETIMEDOUT';
-        
+        const isTLSFingerprintingError = error.code === 'ECONNRESET' ||
+          error.message.includes('socket hang up') ||
+          error.code === 'ETIMEDOUT';
+
         if (isTLSFingerprintingError && !this.useBrowser) {
           logger.info('⚠️  Detected TLS fingerprinting protection. Automatically switching to browser mode...');
-          
+
           // Enable browser mode for this instance
           this.useBrowser = true;
-          
+
           // Initialize browser manager if not already done
           if (!this.browserManager) {
             this.browserManager = BrowserManager.getInstance();
           }
-          
+
           try {
             return await this.browserFetchKlineData(options);
           } catch (browserError) {
@@ -476,7 +476,7 @@ export class EastMoneyCrawler {
             throw new Error(`Failed to fetch K-line data: ${errorDetails.join(', ')}`);
           }
         }
-        
+
         // Original error handling for non-TLS errors
         const errorDetails: string[] = [];
         errorDetails.push(`Message: ${error.message}`);
@@ -488,7 +488,7 @@ export class EastMoneyCrawler {
         if (error.request) {
           errorDetails.push(`Request made but no response received`);
         }
-        
+
         throw new Error(
           `Failed to fetch K-line data: ${errorDetails.join(', ')}`
         );
@@ -545,11 +545,11 @@ export class EastMoneyCrawler {
     });
 
     const apiResponse = this.parseKlineResponse(response.data);
-    
+
     if (!apiResponse.data) {
       throw new Error('No data returned from API');
     }
-    
+
     return {
       symbol: apiResponse.data.code,
       name: apiResponse.data.name,
@@ -615,7 +615,7 @@ export class EastMoneyCrawler {
       });
 
       const data = this.parseRealtimeResponse(response.data);
-      
+
       if (!data || !data.data) {
         throw new Error('No data returned from API');
       }

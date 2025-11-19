@@ -1,3 +1,5 @@
+import { USER_AGENT } from './constants.js';
+
 /**
  * SSE-related constants
  */
@@ -12,7 +14,7 @@ export const SSE_CONSTANTS = {
   HEARTBEAT_CHECK_INTERVAL: 10000, // 10 seconds
 
   // EventSource headers
-  USER_AGENT: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+  USER_AGENT: USER_AGENT,
   ACCEPT_HEADER: 'text/event-stream',
   CACHE_CONTROL: 'no-cache',
 
