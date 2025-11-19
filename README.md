@@ -122,6 +122,37 @@ npm install && npm run build
 
 K线数据包含 `date`, `open`, `close`, `high`, `low`, `volume`, `amount` 等字段。详细格式说明请参阅 [API 文档](docs/api.md)。
 
+## 作为库使用
+
+emst 可以作为 Node.js 库导入使用，不会触发 CLI 代码执行：
+
+```typescript
+import { 
+  EastMoneyCrawler,
+  Market,
+  addToWatchlist,
+  syncWatchlist,
+  getCachedData
+} from 'emst';
+
+// 创建爬虫实例
+const crawler = new EastMoneyCrawler();
+
+// 获取股票数据
+const data = await crawler.fetchKlineData({
+  code: '688005',
+  market: Market.Shanghai,
+  timeframe: 'daily'
+});
+
+// 使用自选股和缓存功能
+addToWatchlist('688005', Market.Shanghai);
+const results = await syncWatchlist({ timeframe: 'daily' });
+const cached = getCachedData('688005', Market.Shanghai, 'daily');
+```
+
+详细 API 文档请参阅 [API 文档](docs/api.md)。
+
 ## 文档
 
 - **[使用示例](docs/examples.md)** - 详细使用方法、场景示例和脚本集成

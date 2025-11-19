@@ -464,10 +464,13 @@ console.log(`缓存了 ${data.data.length} 条记录`);
 ### 使用编程式 API
 
 ```typescript
-import { EastMoneyCrawler } from './core/crawler.js';
-import { Market } from './infra/types.js';
-import { addToWatchlist, syncWatchlist } from './storage/watchlist.js';
-import { getCachedData } from './storage/cache.js';
+import { 
+  EastMoneyCrawler,
+  Market,
+  addToWatchlist, 
+  syncWatchlist,
+  getCachedData
+} from 'emst';
 
 // 添加股票到自选股
 addToWatchlist('688005', Market.Shanghai);

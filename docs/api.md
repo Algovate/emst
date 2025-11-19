@@ -4,7 +4,17 @@ emst 提供完整的编程式 API，用于获取股票数据、管理自选股�
 
 ## 安装
 
+### 作为依赖安装（推荐）
+
 ```bash
+npm install emst
+```
+
+### 从源码安装
+
+```bash
+git clone https://github.com/Algovate/emst.git
+cd emst
 npm install
 npm run build
 ```
@@ -13,12 +23,40 @@ npm run build
 
 ### 导入模块
 
+从主入口点导入所有 API（推荐方式，不会触发 CLI 代码）：
+
 ```typescript
-import { EastMoneyCrawler } from './core/crawler.js';
-import { Market, Timeframe, CrawlerOptions } from './infra/types.js';
-import { addToWatchlist, getWatchlist, removeFromWatchlist } from './storage/watchlist.js';
-import { getCachedData, setCachedData, isCacheValid } from './storage/cache.js';
-import { syncWatchlist } from './storage/sync.js';
+import { 
+  EastMoneyCrawler,
+  Market, 
+  Timeframe, 
+  CrawlerOptions,
+  addToWatchlist, 
+  getWatchlist, 
+  removeFromWatchlist,
+  getCachedData, 
+  setCachedData, 
+  isCacheValid,
+  syncWatchlist
+} from 'emst';
+```
+
+如果从本地源码导入（开发时）：
+
+```typescript
+import { 
+  EastMoneyCrawler,
+  Market, 
+  Timeframe, 
+  CrawlerOptions,
+  addToWatchlist, 
+  getWatchlist, 
+  removeFromWatchlist,
+  getCachedData, 
+  setCachedData, 
+  isCacheValid,
+  syncWatchlist
+} from './dist/index.js';
 ```
 
 ## 爬虫 API
@@ -262,10 +300,13 @@ interface SyncResult {
 ## 示例：完整工作流
 
 ```typescript
-import { EastMoneyCrawler } from './core/crawler.js';
-import { Market } from './infra/types.js';
-import { addToWatchlist, syncWatchlist } from './storage/watchlist.js';
-import { getCachedData } from './storage/cache.js';
+import { 
+  EastMoneyCrawler,
+  Market,
+  addToWatchlist, 
+  syncWatchlist,
+  getCachedData
+} from 'emst';
 
 // 添加股票到自选股
 addToWatchlist('688005', Market.Shanghai);
